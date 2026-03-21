@@ -1,3 +1,5 @@
+## Project Structure
+```bash
 PlateAI/
 ├── README.md                 # Project overview, setup instructions, and usage
 ├── requirements.txt          # Python dependencies
@@ -42,3 +44,4 @@ PlateAI/
 ├── api/                      # optional
 ├── ui/                       # Frontend interface (web/app UI)
 └── tests/                    # Unit tests and integration tests
+```
