@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlateWise AI - Login</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="phone-shell">
+    <div class="app-screen gradient-screen auth-screen">
+      <div class="auth-header">
+        <div class="logo-circle">P</div>
+        <h1>PlateWise AI</h1>
+        <p>Demo3</p>
+      </div>
+
+      <form class="card auth-card" id="loginForm">
+        <label>Email</label>
+        <input
+          type="email"
+          id="loginEmail"
+          placeholder="Enter your email"
+          autocomplete="email"
+          required
+        />
+
+        <label>Password</label>
+        <input
+          type="password"
+          id="loginPassword"
+          placeholder="Enter your password"
+          autocomplete="current-password"
+          required
+        />
+
+        <button type="submit" class="primary-btn">
+          Login
+        </button>
+
+        <button type="button" class="secondary-btn" id="signupBtn">
+          Create Account
+        </button>
+
+        <p class="muted center-text small-text">
+          This version from week 7
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="./js/pages/indexPage.js"></script>
+</body>
+</html>

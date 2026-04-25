@@ -1,0 +1,162 @@
+[
+  {
+    "id": "who_sodium_001",
+    "category": "nutrition_topic",
+    "topic": "sodium",
+    "tags": ["general", "hypertension", "low_sodium", "kidney_disease"],
+    "short_label": "WHO sodium guideline",
+    "summary": "WHO recommends adults consume less than 2000 mg sodium per day, equivalent to less than 5 g salt per day.",
+    "source_title": "WHO Healthy diet",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet%E2%81%A3%E2%81%A0"
+  },
+  {
+    "id": "who_sugar_001",
+    "category": "nutrition_topic",
+    "topic": "sugar",
+    "tags": ["general", "weight_management", "diabetes", "fatty_liver"],
+    "short_label": "WHO free sugars guideline",
+    "summary": "WHO recommends reducing free sugars to less than 10% of total energy intake and suggests that less than 5% provides additional benefits.",
+    "source_title": "WHO Healthy diet",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet%E2%81%A3%E2%81%A0"
+  },
+  {
+    "id": "who_fat_001",
+    "category": "nutrition_topic",
+    "topic": "fat",
+    "tags": ["general", "weight_management", "cardiovascular", "hyperlipidemia", "fatty_liver"],
+    "short_label": "WHO healthy fats guidance",
+    "summary": "WHO advises limiting total fat to 30% or less of energy intake, saturated fat to less than 10%, and trans fat to less than 1%.",
+    "source_title": "WHO Healthy diet",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet%E2%81%A3%E2%81%A0"
+  },
+  {
+    "id": "who_fruitveg_001",
+    "category": "nutrition_topic",
+    "topic": "healthy_diet",
+    "tags": ["general", "fruit_veg", "fibre", "constipation"],
+    "short_label": "WHO fruit, vegetables, and fibre guidance",
+    "summary": "WHO recommends at least 400 g of fruit and vegetables and at least 25 g of naturally occurring dietary fibre per day for adults.",
+    "source_title": "WHO Healthy diet",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet%E2%81%A3%E2%81%A0"
+  },
+  {
+    "id": "who_potassium_001",
+    "category": "nutrition_topic",
+    "topic": "potassium",
+    "tags": ["general", "blood_pressure", "hypertension"],
+    "short_label": "WHO potassium guideline",
+    "summary": "WHO suggests potassium intake of at least 3510 mg per day for adults in most settings.",
+    "source_title": "WHO Guideline: Potassium intake for adults and children",
+    "source_url": "https://www.who.int/tools/elena/interventions/potassium-cvd-adults"
+  },
+  {
+    "id": "who_condition_hypertension_001",
+    "category": "condition_guidance",
+    "condition": "hypertension",
+    "focus_tags": ["low_sodium", "higher_potassium", "whole_foods"],
+    "who_basis": "direct",
+    "short_label": "WHO dietary guidance for hypertension",
+    "summary": "Prefer a lower-sodium diet. Limit sodium to less than 2000 mg per day, reduce salty sauces, processed foods, instant foods, and salty snacks, and choose more fruit and vegetables. Higher potassium intake from foods can help offset the blood-pressure effects of sodium.",
+    "source_title": "WHO Healthy diet; WHO Sodium reduction; WHO Potassium intake guideline",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet%E2%81%A3%E2%81%A0"
+  },
+  {
+    "id": "who_condition_diabetes_001",
+    "category": "condition_guidance",
+    "condition": "diabetes",
+    "focus_tags": ["low_free_sugar", "high_fibre", "whole_foods", "balanced_diet"],
+    "who_basis": "direct_general",
+    "short_label": "WHO dietary guidance for diabetes",
+    "summary": "Follow WHO healthy-diet principles: emphasize vegetables, fruit, legumes, nuts, and whole grains; limit free sugars to less than 10% of total energy, ideally below 5%; and reduce sugary drinks and highly processed foods high in sugar, salt, and unhealthy fats.",
+    "source_title": "WHO Healthy diet",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet%E2%81%A3%E2%81%A0"
+  },
+  {
+    "id": "who_condition_hyperlipidemia_001",
+    "category": "condition_guidance",
+    "condition": "hyperlipidemia",
+    "focus_tags": ["low_saturated_fat", "no_trans_fat", "whole_foods", "high_fibre"],
+    "who_basis": "direct_general",
+    "short_label": "WHO dietary guidance for hyperlipidemia",
+    "summary": "Reduce saturated fat and industrial trans fat. Prefer minimally processed foods, vegetables, legumes, nuts, and whole grains, and reduce fried foods, fatty processed meats, and foods high in unhealthy fats.",
+    "source_title": "WHO Healthy diet",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet%E2%81%A3%E2%81%A0"
+  },
+  {
+    "id": "who_condition_kidney_disease_001",
+    "category": "condition_guidance",
+    "condition": "kidney_disease",
+    "focus_tags": ["low_sodium", "avoid_processed_foods"],
+    "who_basis": "direct_plus_clinical_caution",
+    "short_label": "WHO-style dietary guidance for kidney disease",
+    "summary": "Keep sodium intake low and avoid highly processed salty foods. This project uses WHO population sodium guidance as a conservative rule for kidney disease, but exact potassium, phosphorus, and protein limits should still be individualized by a clinician.",
+    "source_title": "WHO Healthy diet; WHO Sodium reduction",
+    "source_url": "https://www.who.int/westernpacific/news-room/fact-sheets/detail/salt-reduction"
+  },
+  {
+    "id": "who_condition_gout_001",
+    "category": "condition_guidance",
+    "condition": "gout",
+    "focus_tags": ["balanced_diet", "low_free_sugar", "whole_foods"],
+    "who_basis": "inference_from_general_who_guidance",
+    "short_label": "WHO-style dietary guidance for gout",
+    "summary": "WHO does not provide a gout-specific diet rule in the core sources used here. For this project, apply WHO healthy-diet principles: emphasize minimally processed foods, vegetables, fruit, legumes, and whole grains, and reduce foods high in free sugars and unhealthy fats.",
+    "source_title": "WHO Healthy diet",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet%E2%81%A3%E2%81%A0"
+  },
+  {
+    "id": "who_condition_fatty_liver_001",
+    "category": "condition_guidance",
+    "condition": "fatty_liver",
+    "focus_tags": ["low_free_sugar", "low_unhealthy_fat", "whole_foods", "balanced_energy"],
+    "who_basis": "inference_from_general_who_guidance",
+    "short_label": "WHO-style dietary guidance for fatty liver",
+    "summary": "Use WHO healthy-diet principles to reduce excess energy, free sugars, and unhealthy fats. Prioritize vegetables, fruit, legumes, nuts, and whole grains, and reduce sugary drinks, desserts, and highly processed foods.",
+    "source_title": "WHO Healthy diet",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet%E2%81%A3%E2%81%A0"
+  },
+  {
+    "id": "who_condition_gastritis_001",
+    "category": "condition_guidance",
+    "condition": "gastritis",
+    "focus_tags": ["balanced_diet", "whole_foods"],
+    "who_basis": "inference_limited",
+    "short_label": "WHO-style dietary guidance for gastritis",
+    "summary": "WHO does not provide a gastritis-specific diet rule in the core sources used here. For this project, default to a simple healthy-diet pattern with minimally processed foods and avoid making strong disease-specific claims beyond general healthy eating.",
+    "source_title": "WHO Healthy diet",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet%E2%81%A3%E2%81%A0"
+  },
+  {
+    "id": "who_condition_reflux_001",
+    "category": "condition_guidance",
+    "condition": "reflux",
+    "focus_tags": ["balanced_diet", "whole_foods"],
+    "who_basis": "inference_limited",
+    "short_label": "WHO-style dietary guidance for reflux",
+    "summary": "WHO does not provide a reflux-specific diet rule in the core sources used here. For this project, use general healthy-diet advice and keep reflux-specific trigger avoidance as optional or clinician-directed rather than presenting it as formal WHO disease-specific guidance.",
+    "source_title": "WHO Healthy diet",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet%E2%81%A3%E2%81%A0"
+  },
+  {
+    "id": "who_condition_anemia_001",
+    "category": "condition_guidance",
+    "condition": "anemia",
+    "focus_tags": ["iron_rich", "folate", "vitamin_b12", "vitamin_a", "diet_diversity"],
+    "who_basis": "direct",
+    "short_label": "WHO dietary guidance for anaemia",
+    "summary": "Eat a healthy and diverse diet that includes foods rich in iron, folate, vitamin B12, and vitamin A. Iron deficiency is the most common nutritional cause of anaemia, but anaemia can also have non-diet causes, so medical evaluation may still be needed.",
+    "source_title": "WHO Anaemia",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/ANAEMIA"
+  },
+  {
+    "id": "who_condition_constipation_001",
+    "category": "condition_guidance",
+    "condition": "constipation",
+    "focus_tags": ["high_fibre", "fruit_veg", "whole_grains", "legumes"],
+    "who_basis": "direct_general",
+    "short_label": "WHO dietary guidance for constipation",
+    "summary": "Use WHO healthy-diet principles that emphasize vegetables, fruit, legumes, and whole grains, which support higher naturally occurring dietary fibre intake. Adults should aim for at least 25 g per day dietary fibre according to the WHO healthy diet fact sheet.",
+    "source_title": "WHO Healthy diet",
+    "source_url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet%E2%81%A3%E2%81%A0"
+  }
+]

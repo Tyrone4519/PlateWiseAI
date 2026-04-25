@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlateWise AI - Profile</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="phone-shell">
+    <div class="app-screen">
+      <div class="top-bar">
+        <h2>Profile</h2>
+        <span class="top-tag">Health</span>
+      </div>
+
+      <div class="content with-bottom-nav scroll-area">
+        <div class="card profile-header-card">
+          <div class="avatar-circle" id="avatarCircle">P</div>
+          <h3 id="profileName">User Name</h3>
+          <p class="muted" id="profileGoal">Goal</p>
+
+          <div class="avatar-edit-row">
+            <label class="secondary-btn avatar-upload-label">
+              Change Photo
+              <input type="file" id="avatarUpload" hidden accept="image/*" />
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Personal Information</h3>
+          <div class="profile-summary-row">
+            <div class="profile-chip">
+              <span>Age</span>
+              <strong id="profileAge">-</strong>
+            </div>
+            <div class="profile-chip">
+              <span>Gender</span>
+              <strong id="profileGender">-</strong>
+            </div>
+            <div class="profile-chip">
+              <span>Height</span>
+              <strong><span id="profileHeight">-</span> cm</strong>
+            </div>
+            <div class="profile-chip">
+              <span>Weight</span>
+              <strong><span id="profileWeight">-</span> kg</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Diet & Health</h3>
+          <p><strong>Restrictions:</strong> <span id="profileRestrictions">-</span></p>
+          <p><strong>Health Notes:</strong> <span id="profileHealthNotes">-</span></p>
+        </div>
+
+        <a class="primary-btn link-btn" href="onboarding.html">Edit Profile</a>
+        <button class="secondary-btn" id="logoutBtn">Logout</button>
+      </div>
+
+      <div class="bottom-nav">
+        <a href="dashboard.html" class="nav-item">Dashboard</a>
+        <a href="chat.html" class="nav-item">Chat</a>
+        <a href="history.html" class="nav-item">History</a>
+        <a href="profile.html" class="nav-item active">Profile</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/pages/profilePage.js"></script>
+</body>
+</html>

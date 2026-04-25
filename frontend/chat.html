@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlateWise AI - Chat</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="phone-shell">
+    <div class="app-screen">
+      <div class="top-bar">
+        <h2>PlateWise Chat</h2>
+        <span class="top-tag">Meal AI</span>
+      </div>
+
+      <div class="chat-layout">
+        <div class="chat-content chat-content-page" id="chatMessages">
+          <div class="message ai-message">
+            Upload a meal image, take a photo, analyze it, or chat about your diet 🍱
+          </div>
+        </div>
+
+        <div class="chat-input-panel">
+          <input id="chatInput" type="text" placeholder="Type your message..." />
+
+          <div class="chat-actions">
+            <label class="secondary-btn">
+              Upload
+              <input type="file" id="imageUpload" hidden accept="image/*" />
+            </label>
+
+            <label class="secondary-btn">
+              Camera
+              <input type="file" id="cameraCapture" hidden accept="image/*" capture="environment" />
+            </label>
+
+            <button id="sendBtn" class="primary-btn">Send</button>
+            <button id="analyzeBtn" class="secondary-btn">Analyze</button>
+            <button id="reportBtn" class="secondary-btn">Report</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <a href="dashboard.html" class="nav-item">Dashboard</a>
+        <a href="chat.html" class="nav-item active">Chat</a>
+        <a href="history.html" class="nav-item">History</a>
+        <a href="profile.html" class="nav-item">Profile</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/pages/chatPage.js"></script>
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlateWise AI - History</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    .history-filter-card {
+      padding: 16px;
+    }
+
+    .history-filter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .history-filter-header h3 {
+      margin: 0;
+    }
+
+    .filter-count-pill {
+      background: var(--primary-soft);
+      color: var(--primary-dark);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .history-search-wrap {
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .history-search-wrap input {
+      padding-left: 40px;
+      margin-bottom: 0;
+      height: 48px;
+      border-radius: 18px;
+      font-size: 15px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .quick-filter-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .quick-filter-btn {
+      flex: 1;
+      border: none;
+      border-radius: 999px;
+      padding: 9px 8px;
+      font-size: 12px;
+      font-weight: 900;
+      background: #fff7e8;
+      color: var(--primary-dark);
+      cursor: pointer;
+      border: 1px solid #eadfca;
+    }
+
+    .quick-filter-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .date-filter-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .date-field label {
+      display: block;
+      font-size: 13px;
+      margin: 0 0 6px;
+      color: var(--muted);
+      font-weight: 900;
+    }
+
+    .date-field input {
+      margin-bottom: 0;
+      height: 44px;
+      border-radius: 16px;
+      font-size: 14px;
+    }
+
+    .history-filter-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .history-filter-actions button {
+      margin-top: 0;
+      height: 42px;
+      border-radius: 16px;
+      font-size: 14px;
+    }
+
+    .history-result-count {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 12px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .report-card-compact {
+      padding: 16px;
+    }
+
+    .report-title-line {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .report-title-line h3 {
+      margin: 0;
+      line-height: 1.18;
+      max-width: 230px;
+    }
+
+    .report-date-line {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 6px;
+    }
+
+    .history-nutrition-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .history-nutrition-grid .nutrition-item {
+      padding: 10px 12px;
+    }
+
+    .history-summary-text {
+      line-height: 1.45;
+      font-size: 14px;
+      color: var(--text);
+      max-height: 96px;
+      overflow: hidden;
+    }
+
+    .history-foods {
+      font-size: 14px;
+      line-height: 1.35;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="phone-shell">
+    <div class="app-screen">
+      <div class="top-bar">
+        <h2>History</h2>
+        <span class="top-tag">Reports</span>
+      </div>
+
+      <div class="content with-bottom-nav scroll-area">
+        <div class="card history-filter-card">
+          <div class="history-filter-header">
+            <h3>Search Reports</h3>
+            <span class="filter-count-pill" id="historyResultCount">0 reports</span>
+          </div>
+
+          <div class="history-search-wrap">
+            <span class="search-icon">⌕</span>
+            <input
+              type="text"
+              id="historySearch"
+              placeholder="Search food, advice, risk..."
+            />
+          </div>
+
+          <div class="quick-filter-row">
+            <button class="quick-filter-btn active" id="filterAllBtn" type="button">All</button>
+            <button class="quick-filter-btn" id="filterTodayBtn" type="button">Today</button>
+            <button class="quick-filter-btn" id="filter7DaysBtn" type="button">7 Days</button>
+          </div>
+
+          <div class="date-filter-row">
+            <div class="date-field">
+              <label for="historyDateFrom">From</label>
+              <input type="date" id="historyDateFrom" />
+            </div>
+
+            <div class="date-field">
+              <label for="historyDateTo">To</label>
+              <input type="date" id="historyDateTo" />
+            </div>
+          </div>
+
+          <div class="history-filter-actions">
+            <button class="secondary-btn" id="clearHistoryFiltersBtn" type="button">Clear</button>
+            <button class="primary-btn" id="applyHistoryFiltersBtn" type="button">Search</button>
+          </div>
+        </div>
+
+        <div id="historyContainer">
+          <div class="card">
+            <h3>Saved Reports</h3>
+            <p class="muted">Your generated meal reports will appear here.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <a href="dashboard.html" class="nav-item">Dashboard</a>
+        <a href="chat.html" class="nav-item">Chat</a>
+        <a href="history.html" class="nav-item active">History</a>
+        <a href="profile.html" class="nav-item">Profile</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/pages/historyPage.js"></script>
+</body>
+</html>

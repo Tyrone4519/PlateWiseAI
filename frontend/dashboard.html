@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlateWise AI - Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="phone-shell">
+    <div class="app-screen">
+      <div class="top-bar">
+        <h2>Dashboard</h2>
+        <span class="top-tag">Today</span>
+      </div>
+
+      <div class="content with-bottom-nav scroll-area">
+        <div class="card hero-card">
+          <p class="muted">Welcome back</p>
+          <h3 id="dashboardGreeting">User</h3>
+          <p class="muted" id="todaySummaryText">Your nutrition overview for today.</p>
+        </div>
+
+        <div class="card">
+          <h3>Today’s Meals</h3>
+          <div class="stat-row">
+            <div class="stat-box">
+              <span class="stat-number" id="todayMealsCount">0</span>
+              <span class="stat-label">Meals</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number" id="todayCalories">0</span>
+              <span class="stat-label">Calories</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number" id="todayRisk">Low</span>
+              <span class="stat-label">Risk</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>7-Day Intake Trend</h3>
+          <div id="trendChart" class="trend-chart"></div>
+          <div class="chart-label-row" id="trendLabels"></div>
+        </div>
+
+        <div class="card">
+          <h3>Nutrition Detail</h3>
+          <div class="nutrition-grid">
+            <div class="nutrition-item">
+              <strong id="nutritionCalories">0</strong>
+              <span>Calories</span>
+            </div>
+            <div class="nutrition-item">
+              <strong id="nutritionSodium">0 mg</strong>
+              <span>Sodium</span>
+            </div>
+            <div class="nutrition-item">
+              <strong id="nutritionSugar">0 g</strong>
+              <span>Sugar</span>
+            </div>
+            <div class="nutrition-item">
+              <strong id="nutritionCarbs">0 g</strong>
+              <span>Carbs</span>
+            </div>
+            <div class="nutrition-item">
+              <strong id="nutritionFat">0 g</strong>
+              <span>Fat</span>
+            </div>
+            <div class="nutrition-item">
+              <strong id="nutritionProtein">0 g</strong>
+              <span>Protein</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Latest Report</h3>
+          <p><strong>Meal:</strong> <span id="lastMealTitle">No reports yet</span></p>
+          <p><strong>Risk:</strong> <span id="lastMealRisk">-</span></p>
+          <p><strong>Suggestion:</strong> <span id="lastMealSuggestion">Save a report from Chat to see data here.</span></p>
+        </div>
+
+        <div class="card">
+          <h3>Quick Action</h3>
+          <a class="primary-btn link-btn" href="chat.html">Start Meal Analysis</a>
+        </div>
+      </div>
+
+      <div class="bottom-nav">
+        <a href="dashboard.html" class="nav-item active">Dashboard</a>
+        <a href="chat.html" class="nav-item">Chat</a>
+        <a href="history.html" class="nav-item">History</a>
+        <a href="profile.html" class="nav-item">Profile</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/pages/dashboardPage.js"></script>
+</body>
+</html>
