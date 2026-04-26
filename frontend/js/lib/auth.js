@@ -1,15 +1,7 @@
 import { supabase } from "./supabaseClient.js";
 
 function getEmailRedirectUrl() {
-  const isLocal =
-    location.hostname === "127.0.0.1" ||
-    location.hostname === "localhost";
-
-  if (isLocal) {
-    return `${location.origin}/frontend/confirm.html`;
-  }
-
-  return `${location.origin}/confirm.html`;
+  return new URL("confirm.html", window.location.href).href;
 }
 
 export async function signUpWithEmail(email, password) {

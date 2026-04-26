@@ -2,6 +2,8 @@ import {
   signInWithEmail,
   signUpWithEmail,
   getCurrentSession,
+  getCurrentUser,
+  signOutUser,
 } from "../lib/auth.js";
 
 import {
@@ -28,17 +30,24 @@ function isProfileComplete(profile) {
 }
 
 async function goToNextPageAfterLogin() {
-  await ensureAppUser();
+  try {
+    await ensureAppUser();
 
-  const profileData = await getUserProfile().catch(() => null);
-  const profile = profileData?.profile || null;
+    const profileData = await getUserProfile().catch(() => null);
+    const profile = profileData?.profile || null;
 
-  if (!isProfileComplete(profile)) {
-    window.location.href = "onboarding.html";
-    return;
+    if (!isProfileComplete(profile)) {
+      window.location.href = "onboarding.html";
+      return;
+    }
+
+    window.location.href = "dashboard.html";
+  } catch (error) {
+    console.error("goToNextPageAfterLogin failed:", error);
+
+    await signOutUser().catch(() => {});
+    showToast("Login session expired. Please login again.", true);
   }
-
-  window.location.href = "dashboard.html";
 }
 
 async function handleLogin(event) {
@@ -53,9 +62,12 @@ async function handleLogin(event) {
   }
 
   try {
+    await signOutUser().catch(() => {});
+
     await signInWithEmail(email, password);
     await goToNextPageAfterLogin();
   } catch (error) {
+    console.error("login error:", error);
     showToast(error.message || "Login failed.", true);
   }
 }
@@ -75,23 +87,33 @@ async function handleSignup() {
   }
 
   try {
+    await signOutUser().catch(() => {});
+
     await signUpWithEmail(email, password);
     showToast("Sign-up successful. Please confirm your email, then login.");
   } catch (error) {
+    console.error("signup error:", error);
     showToast(error.message || "Sign-up failed.", true);
   }
 }
 
 async function boot() {
+  $("loginForm")?.addEventListener("submit", handleLogin);
+  $("signupBtn")?.addEventListener("click", handleSignup);
+
   const session = await getCurrentSession().catch(() => null);
 
-  if (session?.user) {
-    await goToNextPageAfterLogin();
+  if (!session?.user) {
     return;
   }
 
-  $("loginForm")?.addEventListener("submit", handleLogin);
-  $("signupBtn")?.addEventListener("click", handleSignup);
+  try {
+    await getCurrentUser();
+    await goToNextPageAfterLogin();
+  } catch (error) {
+    console.warn("Invalid stored session. Signing out.", error);
+    await signOutUser().catch(() => {});
+  }
 }
 
 boot();
