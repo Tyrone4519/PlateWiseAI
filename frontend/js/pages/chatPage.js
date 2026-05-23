@@ -8,7 +8,7 @@ const IS_LOCAL =
 
 const NLP_BASE = IS_LOCAL
   ? "http://127.0.0.1:9000"
-  : (window.PLATEWISE_NLP_BASE || localStorage.getItem("PLATEWISE_NLP_BASE") || "https://platewise-nlp.onrender.com");
+  : (window.PLATEWISE_NLP_BASE || localStorage.getItem("PLATEWISE_NLP_BASE") || "https://YOUR_RENDER_NLP_URL.onrender.com");
 
 const chatMessages = document.getElementById("chatMessages");
 const chatInput = document.getElementById("chatInput");
