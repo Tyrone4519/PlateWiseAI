@@ -1,28 +1,13 @@
-import { supabase } from "./supabaseClient.js";
-
-function getEmailRedirectUrl() {
-  return new URL("confirm.html", window.location.href).href;
-}
+import { supabase } from './supabaseClient.js';
 
 export async function signUpWithEmail(email, password) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: getEmailRedirectUrl(),
-    },
-  });
-
+  const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) throw error;
   return data;
 }
 
 export async function signInWithEmail(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
 }

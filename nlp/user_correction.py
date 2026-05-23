@@ -1,3 +1,5 @@
+import re
+
 from embedding_utils import confidence_from_score, encode_templates, predict_intent_by_similarity
 from food_extractor import extract_foods
 
@@ -30,6 +32,8 @@ INTENT_TEMPLATES = {
         "change pork to tofu",
         "substitute pork with tofu",
         "correct the ingredient",
+        "pork is tofu",
+        "egg is chicken",
         "it is tofu not pork",
         "this is tofu instead of pork",
         "replace shrimp with chicken",
@@ -87,6 +91,40 @@ def build_command(intent: str, foods: list[str]) -> dict | None:
     return None
 
 
+def clean_food_phrase(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r"\b(actually|really|just|the|a|an)\b", " ", text)
+    text = re.split(r"\b(?:instead of|not|but|with)\b", text, maxsplit=1)[0]
+    text = re.sub(r"[^\w\s'-]", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def infer_is_replace_command(user_text: str, food_library: dict) -> dict | None:
+    normalized = user_text.lower().strip()
+    normalized = re.sub(r"\s+", " ", normalized)
+
+    match = re.search(r"\b(?P<old>.+?)\s+is\s+(?P<new>.+)\b", normalized)
+    if not match:
+        return None
+
+    old_foods = extract_foods(match.group("old"), food_library)
+    new_foods = extract_foods(match.group("new"), food_library)
+    old_food = old_foods[0] if old_foods else clean_food_phrase(match.group("old"))
+    new_food = new_foods[0] if new_foods else clean_food_phrase(match.group("new"))
+
+    if old_food in {"this", "it", "that"}:
+        return None
+
+    if old_food and new_food and old_food != new_food:
+        return {
+            "action": "replace",
+            "from": old_food,
+            "to": new_food,
+        }
+
+    return None
+
+
 def process_user_correction(
     user_text: str,
     model,
@@ -96,10 +134,11 @@ def process_user_correction(
 ) -> dict:
     prediction = predict_correction_intent(user_text, model, intent_labels, intent_embeddings)
     foods = extract_foods(user_text, food_library)
-    command = build_command(prediction["intent"], foods)
+    command = infer_is_replace_command(user_text, food_library) or build_command(prediction["intent"], foods)
+    intent = "replace" if command and command.get("action") == "replace" else prediction["intent"]
 
     return {
-        "intent": prediction["intent"],
+        "intent": intent,
         "score": prediction["score"],
         "confidence": prediction["confidence"],
         "foods": foods,

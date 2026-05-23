@@ -3,50 +3,174 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>PlateWise AI - Login</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
   <div class="phone-shell">
-    <div class="app-screen gradient-screen auth-screen">
-      <div class="auth-header">
-        <div class="logo-circle">P</div>
-        <h1>PlateWise AI</h1>
-        <p>Demo3</p>
+    <div class="app-screen gradient-screen auth-screen stitch-auth-v3">
+      <div class="auth-header stitch-auth-header-v3">
+        <div class="stitch-brand-v3">
+  <svg
+    class="stitch-brand-icon-v3"
+    viewBox="0 0 48 48"
+    fill="none"
+    aria-hidden="true"
+  >
+    <path
+      d="M42.67 2.67 L35.2 2.67 L28.8 8 L27.73 10.13 L27.73 17.6 L3.2 42.13 L4.27 44.27 L23.47 26.13 L42.67 44.27 L44.8 43.2 L26.67 24 L29.87 19.73 L37.33 19.73 L43.73 14.4 L44.8 12.27 L44.8 5.87 Z"
+      fill="currentColor"
+    />
+
+    <path
+      d="M5.33 2.67 L3.2 4.8 L3.2 8 L2.13 9.07 L3.2 10.13 L3.2 13.33 L5.33 16.53 L12.8 22.93 L19.2 16.53 Z"
+      fill="currentColor"
+    />
+  </svg>
+
+  <span>PlateWise AI</span>
+</div>
+
+        <h1>Welcome back</h1>
+        <p>Please enter your details to sign in to your account.</p>
       </div>
 
-      <form class="card auth-card" id="loginForm">
-        <label>Email</label>
-        <input
-          type="email"
-          id="loginEmail"
-          placeholder="Enter your email"
-          autocomplete="email"
-          required
-        />
+      <form class="card auth-card stitch-auth-card-v3" id="loginForm">
+        <div class="stitch-field-v3">
+          <label for="loginEmail">Email Address</label>
 
-        <label>Password</label>
-        <input
-          type="password"
-          id="loginPassword"
-          placeholder="Enter your password"
-          autocomplete="current-password"
-          required
-        />
+          <div class="stitch-input-v3">
+            <span class="stitch-input-icon-v3" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <rect
+                  x="3.5"
+                  y="5.5"
+                  width="17"
+                  height="13"
+                  rx="1.6"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                />
+                <path
+                  d="M4.4 7.2L10.95 12.12C11.57 12.59 12.43 12.59 13.05 12.12L19.6 7.2"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </span>
 
-        <button type="submit" class="primary-btn">
-          Login
+            <input
+              type="email"
+              id="loginEmail"
+              placeholder="name@company.com"
+              autocomplete="email"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="stitch-field-v3">
+          <div class="stitch-label-row-v3">
+            <label for="loginPassword">Password</label>
+            <a href="#" class="stitch-forgot-v3">Forgot?</a>
+          </div>
+
+          <div class="stitch-input-v3">
+            <span class="stitch-input-icon-v3" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M8.25 10V7.8C8.25 5.73 9.93 4.05 12 4.05C14.07 4.05 15.75 5.73 15.75 7.8V10"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                  stroke-linecap="round"
+                />
+                <rect
+                  x="4.75"
+                  y="10"
+                  width="14.5"
+                  height="10"
+                  rx="1.8"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                />
+                <circle cx="12" cy="15" r="1.3" fill="currentColor" />
+              </svg>
+            </span>
+
+            <input
+              type="password"
+              id="loginPassword"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              required
+            />
+
+            <button
+              type="button"
+              class="stitch-password-toggle-v3"
+              id="togglePassword"
+              aria-label="Show password"
+            >
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M3 3L21 21"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M10.6 10.6C10.23 10.96 10 11.46 10 12C10 13.1 10.9 14 12 14C12.54 14 13.04 13.77 13.4 13.4"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M9.9 5.08C10.57 4.86 11.27 4.75 12 4.75C16 4.75 19.1 8.2 20.25 10.06C20.57 10.58 20.73 10.84 20.82 11.23C20.89 11.53 20.89 12.47 20.82 12.77C20.73 13.16 20.57 13.42 20.25 13.94C19.8 14.65 18.99 15.78 17.83 16.82M6.23 6.23C4.97 7.1 4.03 8.26 3.75 8.71C3.43 9.22 3.27 9.48 3.18 9.88C3.11 10.17 3.11 11.12 3.18 11.41C3.27 11.81 3.43 12.07 3.75 12.58C4.91 14.44 8 17.9 12 17.9C13.61 17.9 15.05 17.33 16.25 16.59"
+                  stroke="currentColor"
+                  stroke-width="1.9"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <label class="stitch-remember-v3" for="rememberMe">
+          <input id="rememberMe" type="checkbox" />
+          <span>Keep me logged in</span>
+        </label>
+
+        <button type="submit" class="primary-btn stitch-signin-v3">
+          Sign In to Dashboard
         </button>
 
-        <button type="button" class="secondary-btn" id="signupBtn">
-          Create Account
-        </button>
+        <div class="stitch-create-v3">
+          <span>Don’t have an account?</span>
+          <button type="button" id="signupBtn">Create Account</button>
+        </div>
 
-        <p class="muted center-text small-text">
-          This version from week 7
-        </p>
+        <div class="stitch-chips-v3">
+          <span>Keto Friendly</span>
+          <span>Vegan Mode</span>
+          <span>Macro Tracking</span>
+        </div>
       </form>
+
+      <div class="stitch-footer-v3">
+        <p>© 2026 PlateWise AI. Precision Nutrition through Intelligence.</p>
+      </div>
     </div>
   </div>
 

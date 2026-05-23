@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>PlateWise AI - Meal Detail</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="phone-shell">
+    <div class="app-screen meal-detail-screen">
+      <header class="meal-detail-header">
+        <button type="button" class="meal-detail-back" id="mealDetailBackBtn" aria-label="Back to history">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M15 18L9 12L15 6"
+              stroke="currentColor"
+              stroke-width="2.25"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+
+        <h1>Meal Detail</h1>
+
+        <span class="meal-detail-header-spacer"></span>
+      </header>
+
+      <main class="meal-detail-main">
+        <section class="meal-detail-empty hidden" id="mealDetailEmpty">
+          <div class="meal-detail-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M12 3L21 20H3L12 3Z"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linejoin="round"
+              />
+              <path d="M12 9V13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              <path d="M12 17H12.01" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" />
+            </svg>
+          </div>
+
+          <h2>No report selected</h2>
+          <p>Please go back to Meal History and choose one report to view its details.</p>
+
+          <button type="button" id="mealDetailEmptyBackBtn">Back to History</button>
+        </section>
+
+        <section class="meal-detail-content" id="mealDetailContent">
+          <section class="meal-detail-hero-card">
+            <div class="meal-detail-image" id="mealDetailImage"></div>
+
+            <div class="meal-detail-hero-copy">
+              <span id="mealDetailDate">Unknown date</span>
+              <h2 id="mealDetailTitle">Meal Report</h2>
+              <p id="mealDetailSummary">Nutrition analysis and meal details.</p>
+            </div>
+          </section>
+
+          <section class="meal-detail-macro-card">
+            <div class="meal-detail-section-title">
+              <span>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 19V5M4 19H20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                  <path d="M8 15L11 12L14 14L19 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <div>
+                <h3>Nutrition Summary</h3>
+                <p>Estimated macro breakdown</p>
+              </div>
+            </div>
+
+            <div class="meal-detail-macro-grid">
+              <div>
+                <span>CALS</span>
+                <strong id="mealDetailCalories">0</strong>
+              </div>
+              <div>
+                <span>PROTEIN</span>
+                <strong id="mealDetailProtein">0g</strong>
+              </div>
+              <div>
+                <span>CARBS</span>
+                <strong id="mealDetailCarbs">0g</strong>
+              </div>
+              <div>
+                <span>FAT</span>
+                <strong id="mealDetailFat">0g</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="meal-detail-card">
+            <div class="meal-detail-section-title">
+              <span>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M5 6H19M5 12H19M5 18H14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                </svg>
+              </span>
+              <div>
+                <h3>Report Items</h3>
+                <p>Foods detected in this meal</p>
+              </div>
+            </div>
+
+            <div class="meal-detail-item-list" id="mealDetailItems"></div>
+          </section>
+
+          <section class="meal-detail-card">
+            <div class="meal-detail-section-title">
+              <span>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M12 3L20 7V12C20 16.5 16.8 19.8 12 21C7.2 19.8 4 16.5 4 12V7L12 3Z"
+                    stroke="currentColor"
+                    stroke-width="1.75"
+                    stroke-linejoin="round"
+                  />
+                  <path d="M9 12L11 14L15.5 9.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <div>
+                <h3>Details</h3>
+                <p>AI analysis and notes</p>
+              </div>
+            </div>
+
+            <div class="meal-detail-analysis" id="mealDetailAnalysis"></div>
+          </section>
+        </section>
+      </main>
+
+      <nav class="bottom-nav meal-detail-nav">
+        <a href="dashboard.html" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 13H10V20H4V13ZM14 4H20V20H14V4ZM4 4H10V9H4V4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+          </svg>
+          <span>Dashboard</span>
+        </a>
+
+        <a href="chat.html" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 5.5C4 4.67 4.67 4 5.5 4H18.5C19.33 4 20 4.67 20 5.5V14.5C20 15.33 19.33 16 18.5 16H9L5 20V16H5.5C4.67 16 4 15.33 4 14.5V5.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+          </svg>
+          <span>Chatbot</span>
+        </a>
+
+        <a href="history.html" class="nav-item active">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 8V12L15 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M4 12C4 7.58 7.58 4 12 4C16.42 4 20 7.58 20 12C20 16.42 16.42 20 12 20C9.58 20 7.4 18.92 5.94 17.22" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            <path d="M4 17V13H8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>History</span>
+        </a>
+
+        <a href="profile.html" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12Z" stroke="currentColor" stroke-width="1.8" />
+            <path d="M5 20C5.9 16.95 8.65 15 12 15C15.35 15 18.1 16.95 19 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
+          <span>Profile</span>
+        </a>
+      </nav>
+    </div>
+  </div>
+
+  <script type="module" src="./js/pages/mealDetailPage.js?v=20260515-1"></script>
+</body>
+</html>

@@ -3,100 +3,531 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>PlateWise AI - Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css?v=20260516-hydration-egg-8" />
 </head>
+
 <body>
   <div class="phone-shell">
-    <div class="app-screen">
-      <div class="top-bar">
-        <h2>Dashboard</h2>
-        <span class="top-tag">Today</span>
-      </div>
-
-      <div class="content with-bottom-nav scroll-area">
-        <div class="card hero-card">
-          <p class="muted">Welcome back</p>
-          <h3 id="dashboardGreeting">User</h3>
-          <p class="muted" id="todaySummaryText">Your nutrition overview for today.</p>
+    <div class="app-screen dashboard-stitch-screen">
+      <header class="dashboard-stitch-header">
+        <div>
+          <span>Today</span>
+          <h1>Dashboard</h1>
         </div>
 
-        <div class="card">
-          <h3>Today’s Meals</h3>
-          <div class="stat-row">
-            <div class="stat-box">
-              <span class="stat-number" id="todayMealsCount">0</span>
-              <span class="stat-label">Meals</span>
+        <button
+          type="button"
+          class="dashboard-stitch-profile-btn"
+          id="dashboardProfileBtn"
+          aria-label="Open profile"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 12C14.2091 12 16 10.2091 16 8C16 5.79086 14.2091 4 12 4C9.79086 4 8 5.79086 8 8C8 10.2091 9.79086 12 12 12Z"
+              stroke="currentColor"
+              stroke-width="1.8"
+            />
+            <path
+              d="M5 20C5.9 16.95 8.65 15 12 15C15.35 15 18.1 16.95 19 20"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+      </header>
+
+      <main class="dashboard-stitch-content">
+        <!-- Today summary -->
+        <section class="dashboard-stitch-hero">
+          <div class="dashboard-stitch-hero-top">
+            <div>
+              <p>Today’s Meal</p>
+              <h2 id="dashboardGreeting">Welcome back</h2>
             </div>
-            <div class="stat-box">
-              <span class="stat-number" id="todayCalories">0</span>
-              <span class="stat-label">Calories</span>
+
+            <span class="dashboard-risk-pill low" id="todayRisk">Low Risk</span>
+          </div>
+
+          <p class="dashboard-stitch-summary" id="todaySummaryText">
+            Your nutrition overview for today.
+          </p>
+
+          <div class="dashboard-hero-stats">
+            <div>
+              <strong id="todayMealsCount">0</strong>
+              <span>Meals</span>
             </div>
-            <div class="stat-box">
-              <span class="stat-number" id="todayRisk">Low</span>
-              <span class="stat-label">Risk</span>
+
+            <div>
+              <strong id="todayCalories">0</strong>
+              <span>kcal</span>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="card">
-          <h3>7-Day Intake Trend</h3>
-          <div id="trendChart" class="trend-chart"></div>
-          <div class="chart-label-row" id="trendLabels"></div>
-        </div>
+        <!-- Daily calorie target -->
+        <section class="dashboard-card daily-progress-card">
+          <h3 class="dashboard-section-title">Daily Calorie Target</h3>
+          <p class="dashboard-subtitle" id="dashboardCalorieGoal">0 kcal</p>
 
-        <div class="card">
-          <h3>Nutrition Detail</h3>
-          <div class="nutrition-grid">
-            <div class="nutrition-item">
-              <strong id="nutritionCalories">0</strong>
-              <span>Calories</span>
+          <div class="calorie-ring-wrap">
+            <svg class="calorie-ring" viewBox="0 0 180 180" aria-hidden="true">
+              <circle class="calorie-ring-bg" cx="90" cy="90" r="76"></circle>
+              <circle
+                class="calorie-ring-progress calorie-ring-consumed"
+                id="calorieRingConsumed"
+                cx="90"
+                cy="90"
+                r="76"
+              ></circle>
+              <circle
+                class="calorie-ring-progress calorie-ring-burned"
+                id="calorieRingBurned"
+                cx="90"
+                cy="90"
+                r="61"
+              ></circle>
+            </svg>
+
+            <div class="calorie-ring-center">
+              <span class="calorie-left-number" id="dashboardCaloriesLeft">0</span>
+              <span class="calorie-left-label">kcal left</span>
             </div>
-            <div class="nutrition-item">
-              <strong id="nutritionSodium">0 mg</strong>
-              <span>Sodium</span>
+          </div>
+
+          <div class="daily-stat-row">
+            <div class="daily-stat-item">
+              <div class="daily-stat-main">
+                <span class="daily-stat-number" id="dashboardCaloriesConsumed">0</span>
+                <span class="daily-stat-label">CONSUMED</span>
+              </div>
             </div>
-            <div class="nutrition-item">
-              <strong id="nutritionSugar">0 g</strong>
-              <span>Sugar</span>
+
+            <div class="daily-stat-divider"></div>
+
+            <div class="daily-stat-item">
+              <div class="daily-stat-main">
+                <span class="daily-stat-number burned" id="dashboardCaloriesBurned">0</span>
+                <span class="daily-stat-label">BURNED</span>
+              </div>
+              <button type="button" class="dashboard-add-activity-btn" id="dashboardAddActivityBtn">+ Add activity</button>
             </div>
-            <div class="nutrition-item">
-              <strong id="nutritionCarbs">0 g</strong>
-              <span>Carbs</span>
+          </div>
+        </section>
+
+        <!-- Merged Logged Intake + Macro Targets -->
+        <section class="dashboard-card macro-progress-card dashboard-nutrition-progress-card">
+          <div class="dashboard-section-title">
+            <div>
+              <h3>Today’s Nutrition Progress</h3>
+              <p>Logged intake compared with your daily targets</p>
             </div>
-            <div class="nutrition-item">
-              <strong id="nutritionFat">0 g</strong>
-              <span>Fat</span>
-            </div>
-            <div class="nutrition-item">
-              <strong id="nutritionProtein">0 g</strong>
+
+            <button type="button" id="dashboardLogMealBtn">Log Meal</button>
+          </div>
+
+          <div class="macro-progress-item">
+            <div class="macro-progress-row">
               <span>Protein</span>
+              <span id="dashboardProteinText">0g / 0g</span>
+            </div>
+            <div class="macro-bar">
+              <div class="macro-bar-fill protein-fill" id="dashboardProteinBar"></div>
             </div>
           </div>
-        </div>
 
-        <div class="card">
-          <h3>Latest Report</h3>
-          <p><strong>Meal:</strong> <span id="lastMealTitle">No reports yet</span></p>
-          <p><strong>Risk:</strong> <span id="lastMealRisk">-</span></p>
-          <p><strong>Suggestion:</strong> <span id="lastMealSuggestion">Save a report from Chat to see data here.</span></p>
-        </div>
+          <div class="macro-progress-item">
+            <div class="macro-progress-row">
+              <span>Carbs</span>
+              <span id="dashboardCarbsText">0g / 0g</span>
+            </div>
+            <div class="macro-bar">
+              <div class="macro-bar-fill carbs-fill" id="dashboardCarbsBar"></div>
+            </div>
+          </div>
 
-        <div class="card">
-          <h3>Quick Action</h3>
-          <a class="primary-btn link-btn" href="chat.html">Start Meal Analysis</a>
+          <div class="macro-progress-item">
+            <div class="macro-progress-row">
+              <span>Fat</span>
+              <span id="dashboardFatText">0g / 0g</span>
+            </div>
+            <div class="macro-bar">
+              <div class="macro-bar-fill fat-fill" id="dashboardFatBar"></div>
+            </div>
+          </div>
+
+          <div class="macro-progress-item">
+            <div class="macro-progress-row">
+              <span>Sugar</span>
+              <span id="dashboardSugarText">0g / 50g</span>
+            </div>
+            <div class="macro-bar">
+              <div class="macro-bar-fill carbs-fill" id="dashboardSugarBar"></div>
+            </div>
+          </div>
+
+          <div class="macro-progress-item">
+            <div class="macro-progress-row">
+              <span>Sodium</span>
+              <span id="dashboardSodiumText">0mg / 2300mg</span>
+            </div>
+            <div class="macro-bar">
+              <div class="macro-bar-fill protein-fill" id="dashboardSodiumBar"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Hydration -->
+        <section class="dashboard-card hydration-card">
+          <div class="hydration-header">
+            <div>
+              <div class="hydration-title-row">
+                <h3 class="hydration-title">Hydration</h3>
+                <span class="hydration-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <defs>
+                      <linearGradient id="hydrationDropGradient" x1="7" y1="3" x2="17" y2="21" gradientUnits="userSpaceOnUse">
+                        <stop offset="0" stop-color="#8fd7ff" />
+                        <stop offset="0.55" stop-color="#4d83f1" />
+                        <stop offset="1" stop-color="#7b5cff" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d="M12 3.2C12 3.2 6.7 9.6 6.7 14.1C6.7 17.9 9 20.8 12 20.8C15 20.8 17.3 17.9 17.3 14.1C17.3 9.6 12 3.2 12 3.2Z"
+                      fill="url(#hydrationDropGradient)"
+                    />
+                    <path
+                      d="M9.7 11.2C10.4 8.8 12.3 6.4 12.3 6.4"
+                      stroke="rgba(255,255,255,0.72)"
+                      stroke-width="1.35"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </span>
+              </div>
+              <div class="hydration-goal-row">
+                <span>Goal:</span>
+                <input
+                  id="dashboardWaterGoalInput"
+                  type="number"
+                  min="0.5"
+                  max="10"
+                  step="0.5"
+                  value="3.5"
+                  aria-label="Hydration goal in liters"
+                />
+                <span>L</span>
+                <div class="hydration-hint-wrap">
+                  <button type="button" class="hydration-hint-btn" id="hydrationHintBtn" aria-label="Hydration cup info">i</button>
+                  <div class="hydration-hint-pop" id="hydrationHintPop">1 cup = 0.5L</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hydration-top-right">
+              <strong><span id="dashboardWaterConsumed">0.0</span> L</strong>
+            </div>
+          </div>
+
+          <div class="hydration-cups" id="dashboardWaterCups" aria-label="Hydration cups"></div>
+        </section>
+
+        <!-- AI insight -->
+        <section class="dashboard-card ai-insight-card">
+          <h3 class="ai-insight-title">PlateWise Insight</h3>
+          <p id="dashboardInsightText">
+            Upload or analyze a meal to start tracking your daily progress.
+          </p>
+        </section>
+
+        <!-- 7-day trend -->
+        <section class="dashboard-card">
+          <div class="dashboard-section-title">
+            <div>
+              <h3>7-Day Intake Trend</h3>
+              <p>Calories logged over the past week</p>
+            </div>
+          </div>
+
+          <div class="dashboard-trend-chart" id="trendChart"></div>
+          <div class="dashboard-trend-labels" id="trendLabels"></div>
+        </section>
+
+        <!-- Health summary: only keep non-duplicated values -->
+        <section class="dashboard-card">
+          <div class="dashboard-section-title">
+            <div>
+              <h3>Health Summary</h3>
+              <p>Safety-aware daily overview</p>
+            </div>
+          </div>
+
+          <div class="dashboard-detail-grid">
+            <div>
+              <span>Fiber</span>
+              <strong id="nutritionFiber">0 g</strong>
+            </div>
+
+            <div>
+              <span>Risk</span>
+              <strong id="nutritionRiskText">Low</strong>
+            </div>
+          </div>
+
+          <!-- Hidden compatibility fields for existing JS. Do not remove unless dashboardPage.js is also cleaned. -->
+          <span id="nutritionProtein" style="display:none;">0g</span>
+          <span id="nutritionCarbs" style="display:none;">0g</span>
+          <span id="nutritionFat" style="display:none;">0g</span>
+          <span id="nutritionSodium" style="display:none;">0 mg</span>
+          <span id="nutritionSugar" style="display:none;">0 g</span>
+        </section>
+
+        <!-- Latest report -->
+        <section class="dashboard-card dashboard-latest-card">
+          <div class="dashboard-section-title">
+            <div>
+              <h3>Latest Report</h3>
+              <p>Most recent AI meal analysis</p>
+            </div>
+          </div>
+
+          <div class="dashboard-latest-body">
+            <div class="dashboard-latest-icon">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M5 11C5 7.13 8.13 4 12 4C15.87 4 19 7.13 19 11V18C19 19.1 18.1 20 17 20H7C5.9 20 5 19.1 5 18V11Z"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                />
+                <path
+                  d="M8 10H16M8 14H13"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </div>
+
+            <div>
+              <h4 id="lastMealTitle">No reports yet</h4>
+              <p id="lastMealSuggestion">Save a report from Chat to see data here.</p>
+              <span id="lastMealRisk" class="dashboard-mini-risk low">Low Risk</span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <div class="hydration-easter-egg" id="hydrationEasterEgg" aria-hidden="true">
+        <div class="hydration-easter-egg-orbit">
+          <img id="hydrationEasterEggImage" class="hydration-easter-egg-member" src="./assets/colorful_egg/memebers/hydration-easter-egg-1.png" alt="" />
+          <img class="hydration-easter-egg-sign" src="./assets/colorful_egg/nice/nice.png" alt="" />
         </div>
       </div>
 
-      <div class="bottom-nav">
-        <a href="dashboard.html" class="nav-item active">Dashboard</a>
-        <a href="chat.html" class="nav-item">Chat</a>
-        <a href="history.html" class="nav-item">History</a>
-        <a href="profile.html" class="nav-item">Profile</a>
+      <button
+        type="button"
+        class="dashboard-floating-action"
+        id="dashboardFloatingLogBtn"
+        aria-label="Log meal"
+      >
+        <svg viewBox="0 0 24 24" fill="none">
+          <path
+            d="M12 5V19M5 12H19"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+
+      <nav class="bottom-nav dashboard-stitch-nav">
+        <a href="dashboard.html" class="nav-item active">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M4 13H10V20H4V13ZM14 4H20V20H14V4ZM4 4H10V9H4V4Z"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Dashboard</span>
+        </a>
+
+        <a href="chat.html" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M4 5.5C4 4.67 4.67 4 5.5 4H18.5C19.33 4 20 4.67 20 5.5V14.5C20 15.33 19.33 16 18.5 16H9L5 20V16H5.5C4.67 16 4 15.33 4 14.5V5.5Z"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>Chatbot</span>
+        </a>
+
+        <a href="history.html" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 8V12L15 14"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M4 12C4 7.58 7.58 4 12 4C16.42 4 20 7.58 20 12C20 16.42 16.42 20 12 20C9.58 20 7.4 18.92 5.94 17.22"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+            <path
+              d="M4 17V13H8"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <span>History</span>
+        </a>
+
+        <a href="profile.html" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12Z"
+              stroke="currentColor"
+              stroke-width="1.8"
+            />
+            <path
+              d="M5 20C5.9 16.95 8.65 15 12 15C15.35 15 18.1 16.95 19 20"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span>Profile</span>
+        </a>
+      </nav>
+
+      <div class="activity-modal-backdrop hidden" id="activityModalBackdrop" aria-hidden="true">
+        <section class="activity-modal" role="dialog" aria-modal="true" aria-labelledby="activityModalTitle">
+          <button type="button" class="activity-modal-close" id="activityModalCloseBtn" aria-label="Close activity dialog">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" />
+            </svg>
+          </button>
+
+          <div class="activity-modal-hero">
+            <div class="activity-hero-mascot" aria-hidden="true">
+              <img src="./assets/move-burn-mascot.svg" alt="" />
+            </div>
+            <div>
+              <h2 id="activityModalTitle">Move & Burn</h2>
+              <p class="activity-modal-subtitle">Turn your movement into calories burned with a quick custom MET calculator.</p>
+            </div>
+          </div>
+
+          <div class="activity-form-card">
+            <div class="activity-field">
+              <h3>1. How intense was it?</h3>
+              <div class="activity-intensity-list" id="activityIntensityList">
+                <button type="button" data-intensity="Sedentary"><span>VL</span>Very<br />Light</button>
+                <button type="button" data-intensity="Lightly active"><span>L</span>Light</button>
+                <button type="button" class="active" data-intensity="Moderately active"><span>M</span>Moderate</button>
+                <button type="button" data-intensity="Very active"><span>V</span>Vigorous</button>
+                <button type="button" data-intensity="Extra active"><span>VV</span>Very<br />Vigorous</button>
+              </div>
+            </div>
+
+            <div class="activity-field">
+              <h3>2. What activity was it?</h3>
+              <div class="activity-mode-toggle" role="group" aria-label="Activity entry mode">
+                <button type="button" id="activityListModeBtn"><span>List</span> From List</button>
+                <button type="button" class="active" id="activityCustomModeBtn">Custom <span>Edit</span></button>
+              </div>
+              <div class="activity-list-wrap hidden" id="activityListWrap">
+              <label class="activity-select-wrap">
+                <span aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M13 5.5C13 6.6 12.1 7.5 11 7.5C9.9 7.5 9 6.6 9 5.5C9 4.4 9.9 3.5 11 3.5C12.1 3.5 13 4.4 13 5.5Z" fill="currentColor" />
+                    <path d="M9.5 9.2L7.2 13.1L5 12.2M9.5 9.2L13 10.5L15.5 13.2M9.5 9.2L11.4 13.5M11.4 13.5L8.7 20M11.4 13.5L15.5 20" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <button type="button" class="activity-type-button" id="activityTypeButton" aria-expanded="false">
+                  <span id="activityTypeButtonText">Select activity</span>
+                </button>
+                <select id="activityTypeSelect" class="hidden" aria-label="Activity type"></select>
+              </label>
+              <div class="activity-type-menu hidden" id="activityTypeMenu"></div>
+              </div>
+              <div class="activity-custom-wrap" id="activityCustomWrap">
+                <label>Name your activity</label>
+                <div class="activity-custom-input-row">
+                  <input id="activityCustomNameInput" type="text" placeholder="e.g. kitchen dance battle" autocomplete="off" />
+                  <span aria-hidden="true">Custom</span>
+                </div>
+                <div class="activity-template-results hidden" id="activityTemplateResults"></div>
+                <p class="activity-last-values hidden" id="activityLastValues"></p>
+              </div>
+            </div>
+
+            <div class="activity-input-grid">
+            <div class="activity-field">
+                <h3>
+                  MET value
+                  <button type="button" class="activity-info-dot" id="activityMetInfoBtn" aria-label="What is MET?">i</button>
+                </h3>
+                <div class="activity-met-tip hidden" id="activityMetTip">MET measures activity intensity. Higher MET burns more calories.</div>
+              <label class="activity-input-wrap">
+                <input id="activityMetInput" type="number" min="0" step="0.1" value="4.3" />
+                <span>MET</span>
+              </label>
+            </div>
+
+            <div class="activity-field">
+                <h3>Duration</h3>
+              <label class="activity-input-wrap">
+                <input id="activityDurationInput" type="number" min="1" step="1" value="30" />
+                <span>min</span>
+              </label>
+            </div>
+            </div>
+
+            <div class="activity-helper-note">
+              <span aria-hidden="true">Tip</span>
+              <p>Pick an intensity, name your own activity, and set the MET value manually.</p>
+            </div>
+
+            <div class="activity-estimate-box">
+              <div>
+                <strong>3. Estimated Burned</strong>
+                <p>Nice work. Your effort count is ready.</p>
+                <small id="activityCalculationText">Calculated: MET x weight x hours = kcal</small>
+              </div>
+              <span><strong id="activityEstimatedCalories">129</strong> kcal</span>
+            </div>
+
+            <div class="activity-modal-actions">
+              <button type="button" id="activityCancelBtn">Maybe later</button>
+              <button type="button" id="activitySaveBtn">Count My Burn</button>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   </div>
 
-  <script type="module" src="./js/pages/dashboardPage.js"></script>
+  <script type="module" src="./js/pages/dashboardPage.js?v=20260516-hydration-egg-8"></script>
 </body>
 </html>

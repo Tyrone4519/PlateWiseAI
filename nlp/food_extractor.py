@@ -34,6 +34,13 @@ def build_food_lookup(food_library: dict) -> dict[str, str]:
             normalized = normalize_text(term)
             if normalized:
                 lookup[normalized] = canonical_name
+                if normalized.endswith("es"):
+                    lookup.setdefault(normalized[:-2], canonical_name)
+                elif normalized.endswith("s") and len(normalized) > 3:
+                    lookup.setdefault(normalized[:-1], canonical_name)
+
+    lookup.setdefault("tomatos", lookup.get("tomatoes", "tomatoes"))
+    lookup.setdefault("tomotaes", lookup.get("tomatoes", "tomatoes"))
 
     return lookup
 

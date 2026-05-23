@@ -3,72 +3,415 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <title>PlateWise AI - Onboarding</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
   <div class="phone-shell">
-    <div class="app-screen no-nav-screen">
-      <div class="top-bar">
-        <h2>Health Profile</h2>
-        <span class="top-tag">Setup</span>
-      </div>
+    <div class="app-screen onboarding-screen">
+      <header class="onboarding-header">
+        <button type="button" class="onboarding-back-icon" id="topBackBtn" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path
+              d="M15 18L9 12L15 6"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
 
-      <div class="content scroll-area">
-        <div class="card hero-card">
-          <h3>Tell us about you</h3>
-          <p class="muted">This helps PlateWise give safer and more personal nutrition suggestions.</p>
-        </div>
+        <div class="onboarding-brand">
+  <svg
+    class="brand-cutlery-logo"
+    viewBox="0 0 48 48"
+    fill="none"
+    aria-hidden="true"
+  >
+    <path
+      d="M42.67 2.67 L35.2 2.67 L28.8 8 L27.73 10.13 L27.73 17.6 L3.2 42.13 L4.27 44.27 L23.47 26.13 L42.67 44.27 L44.8 43.2 L26.67 24 L29.87 19.73 L37.33 19.73 L43.73 14.4 L44.8 12.27 L44.8 5.87 Z"
+      fill="currentColor"
+    />
+    <path
+      d="M5.33 2.67 L3.2 4.8 L3.2 8 L2.13 9.07 L3.2 10.13 L3.2 13.33 L5.33 16.53 L12.8 22.93 L19.2 16.53 Z"
+      fill="currentColor"
+    />
+  </svg>
 
-        <div class="card">
-          <h3>Basic Information</h3>
+  <span>PlateWise AI</span>
+</div>
 
-          <label>Name</label>
-          <input type="text" id="name" placeholder="Enter your name" />
+        <span class="onboarding-step-label" id="stepLabel">Step 1 of 4</span>
+      </header>
 
-          <label>Age</label>
-          <input type="number" id="age" placeholder="e.g. 68" />
+      <form class="onboarding-form" id="profileForm">
+        <main class="onboarding-content">
+          <!-- Step 1 -->
+          <section class="onboarding-step active" data-step="1">
+            <div class="onboarding-title-block">
+              <h1>Let's get to know you</h1>
+              <p>Your profile helps us personalize your nutrition journey.</p>
+            </div>
 
-          <label>Gender</label>
-          <select id="gender">
-            <option value="">Select gender</option>
-            <option value="female">Female</option>
-            <option value="male">Male</option>
-            <!-- <option value="non-binary">Non-binary</option>
-            <option value="prefer-not-to-say">Prefer not to say</option> -->
-          </select>
+            <div class="avatar-block">
+              <label class="avatar-button" for="profileImageInput">
+                <span class="avatar-circle-soft" id="avatarPreview">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 12C14.2 12 16 10.2 16 8C16 5.8 14.2 4 12 4C9.8 4 8 5.8 8 8C8 10.2 9.8 12 12 12Z"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                    />
+                    <path
+                      d="M4.8 20C5.7 16.9 8.4 15.2 12 15.2C15.6 15.2 18.3 16.9 19.2 20"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </span>
+                <span class="avatar-change">Change Avatar</span>
+              </label>
+              <input id="profileImageInput" type="file" accept="image/*" hidden />
+            </div>
 
-          <label>Height (cm)</label>
-          <input type="number" id="height" placeholder="e.g. 165" />
+            <div class="onboarding-field">
+              <label for="name">Nickname</label>
+              <input id="name" type="text" placeholder="Alex" autocomplete="name" />
+            </div>
 
-          <label>Weight (kg)</label>
-          <input type="number" id="weight" placeholder="e.g. 65" />
-        </div>
+            <div class="onboarding-field">
+              <label for="age">Age</label>
+              <input id="age" type="number" min="1" max="120" placeholder="28" />
+            </div>
 
-        <div class="card">
-          <h3>Goal & Health</h3>
+            <div class="onboarding-field">
+              <label for="gender">Gender Identity</label>
+              <select id="gender">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="non_binary">Non-binary</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+            </div>
+          </section>
 
-          <label>Main Goal</label>
-          <select id="goal">
-            <option value="">Select goal</option>
-            <option value="lose_weight">Lose Weight</option>
-            <option value="gain_weight">Gain Weight</option>
-            <option value="gain_muscle">Gain Muscle</option>
-            <option value="maintain">Maintain</option>
-          </select>
+          <!-- Step 2 -->
+          <section class="onboarding-step" data-step="2">
+            <div class="onboarding-kicker-row">
+              <span>Step 2 of 4</span>
+              <strong>Biometrics</strong>
+            </div>
 
-          <label>Foods You Cannot Eat</label>
-          <input type="text" id="restrictions" placeholder="e.g. peanut, shrimp, vegetarian" />
+            <div class="biometrics-hero">
+              <span class="biometrics-hero-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M7 21V3M7 3H17M7 8H12M7 13H15M7 18H12"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </span>
+              <div>
+                <h1>Precision matters.</h1>
+                <p>Accurate metrics help our AI tailor your nutritional journey perfectly to your unique body composition.</p>
+              </div>
+            </div>
 
-          <label>Health Conditions</label>
-          <textarea id="healthNotes" rows="4" placeholder="e.g. hypertension, diabetes, kidney disease"></textarea>
-        </div>
+            <div class="onboarding-title-block compact">
+              <h1>Let's get your stats</h1>
+              <p>We'll use your height and weight to calculate daily targets.</p>
+            </div>
 
-        <button class="primary-btn" id="saveProfileBtn">Save Profile</button>
-      </div>
+            <div class="metric-grid">
+              <div class="metric-card">
+                <label for="height">Height</label>
+                <div class="metric-input-wrap">
+                  <input id="height" type="number" min="50" max="250" placeholder="170" />
+                  <span>cm</span>
+                </div>
+              </div>
+
+              <div class="metric-card">
+                <label for="weight">Weight</label>
+                <div class="metric-input-wrap">
+                  <input id="weight" type="number" min="20" max="300" placeholder="68" />
+                  <span>kg</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="activity-level-card">
+              <div class="activity-level-title-row">
+                <label for="activityLevel">Activity Level</label>
+
+                <div class="activity-help-wrap activity-help-wrap--onboarding">
+                  <button
+                    type="button"
+                    class="activity-help-btn"
+                    aria-label="Activity level explanation"
+                  >
+                    ?
+                  </button>
+
+                  <div class="activity-tooltip" role="tooltip">
+                    <div><strong>Sedentary</strong>: little or no exercise, mostly sitting</div>
+                    <div><strong>Lightly active</strong>: light exercise 1–3 times/week</div>
+                    <div><strong>Moderately active</strong>: moderate exercise 3–5 times/week</div>
+                    <div><strong>Very active</strong>: intense exercise 6–7 times/week</div>
+                    <div><strong>Extra active</strong>: very intense daily training or physical work</div>
+                  </div>
+                </div>
+              </div>
+
+              <select id="activityLevel">
+                <option value="sedentary">Sedentary</option>
+                <option value="lightly_active">Lightly active</option>
+                <option value="moderately_active" selected>Moderately active</option>
+                <option value="very_active">Very active</option>
+                <option value="extra_active">Extra active</option>
+              </select>
+              <p>Used to estimate your daily calorie and macro targets.</p>
+            </div>
+
+            <div class="info-note-card">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 3.5C8.4 3.5 5.5 6.3 5.5 9.8C5.5 12 6.6 13.6 8.2 14.8C8.8 15.3 9.2 15.9 9.2 16.7V17H14.8V16.7C14.8 15.9 15.2 15.3 15.8 14.8C17.4 13.6 18.5 12 18.5 9.8C18.5 6.3 15.6 3.5 12 3.5Z"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                />
+                <path d="M9.5 20H14.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+              </svg>
+              <p>Don't worry if these change. You can update your biometrics anytime from your profile.</p>
+            </div>
+          </section>
+
+          <!-- Step 3 -->
+          <section class="onboarding-step" data-step="3">
+            <div class="onboarding-kicker-row">
+              <span>Step 3 of 4</span>
+              <strong>Health & Allergies</strong>
+            </div>
+
+            <div class="onboarding-title-block">
+              <h1>Tailor your nutrition</h1>
+              <p>Identify allergies and health conditions to keep AI recommendations safe and effective.</p>
+            </div>
+
+            <div class="health-card">
+              <div class="health-card-title">
+                <span class="health-title-icon">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3L21 20H3L12 3Z"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linejoin="round"
+                    />
+                    <path d="M12 9V13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                    <path d="M12 17H12.01" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <h2>Common Allergies</h2>
+              </div>
+
+              <div class="allergy-chip-grid" id="allergyChipGrid">
+                <button type="button" data-value="Peanuts">Peanuts</button>
+                <button type="button" data-value="Gluten">Gluten</button>
+                <button type="button" data-value="Dairy">Dairy</button>
+                <button type="button" data-value="Shellfish">Shellfish</button>
+                <button type="button" data-value="Soy">Soy</button>
+                <button type="button" data-value="Tree Nuts">Tree Nuts</button>
+                <button type="button" data-value="Eggs">Eggs</button>
+                <button type="button" data-value="Fish">Fish</button>
+              </div>
+
+              <div class="other-input-row">
+                <span>Other</span>
+                <input id="otherAllergy" type="text" placeholder="Specify" />
+              </div>
+            </div>
+
+            <div class="health-card">
+              <div class="health-card-title">
+                <span class="health-title-icon">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 21C12 21 5 16.7 5 9.8C5 6.6 7.5 4 10.5 4C12.1 4 13.3 4.8 14 5.8C14.7 4.8 15.9 4 17.5 4C20.5 4 23 6.6 23 9.8C23 12.3 22.1 14.5 20.8 16.3"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M3 14H7L9 11L12 18L14.5 14H17"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+                <h2>Medical Conditions</h2>
+              </div>
+
+              <div class="condition-grid" id="conditionGrid">
+                <button type="button" data-value="Diabetes">
+                  <span>Diabetes</span>
+                  <em>Glycemic monitoring</em>
+                </button>
+
+                <button type="button" data-value="Hypertension" class="selected">
+                  <span>Hypertension</span>
+                  <em>Low sodium focus</em>
+                </button>
+
+                <button type="button" data-value="High Cholesterol">
+                  <span>High Cholesterol</span>
+                  <em>Fat & fiber balance</em>
+                </button>
+
+                <button type="button" data-value="Celiac Disease">
+                  <span>Celiac Disease</span>
+                  <em>Strict gluten-free</em>
+                </button>
+              </div>
+
+              <div class="other-input-row">
+                <span>Other</span>
+                <input id="otherCondition" type="text" placeholder="Add condition" />
+              </div>
+            </div>
+
+            <div class="safety-banner">
+              <p>Your safety is our priority. PlateWise AI cross-references every recipe with your profile.</p>
+            </div>
+          </section>
+
+          <!-- Step 4 -->
+          <section class="onboarding-step" data-step="4">
+            <div class="onboarding-title-block">
+              <h1>What's your primary goal?</h1>
+              <p>We'll tailor your daily nutrition and AI insights based on your selection.</p>
+            </div>
+
+            <div class="goal-card-list" id="goalCardList">
+              <button type="button" class="goal-card" data-goal="lose_weight">
+                <span class="goal-visual">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M12 5V19M12 19L7 14M12 19L17 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <span class="goal-copy">
+                  <strong>Lose weight</strong>
+                  <em>Sustainable fat loss through calorie optimization and high-satiety meals.</em>
+                </span>
+                <span class="goal-check">
+                  <svg viewBox="0 0 20 20" fill="none">
+                    <path d="M5 10.3L8.3 13.6L15 6.8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+              </button>
+
+              <button type="button" class="goal-card" data-goal="maintain">
+                <span class="goal-visual">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M6 11H18M8 7L6 11L8 15M16 7L18 11L16 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <span class="goal-copy">
+                  <strong>Maintain</strong>
+                  <em>Keep your current weight while focusing on nutrient density and wellness.</em>
+                </span>
+                <span class="goal-check">
+                  <svg viewBox="0 0 20 20" fill="none">
+                    <path d="M5 10.3L8.3 13.6L15 6.8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+              </button>
+
+              <button type="button" class="goal-card" data-goal="gain_muscle">
+                <span class="goal-visual">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M7 14L14 7M14 7H8M14 7V13M5 19H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <span class="goal-copy">
+                  <strong>Gain muscle</strong>
+                  <em>Optimize protein intake and caloric surplus for strength development.</em>
+                </span>
+                <span class="goal-check">
+                  <svg viewBox="0 0 20 20" fill="none">
+                    <path d="M5 10.3L8.3 13.6L15 6.8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+              </button>
+
+              <button type="button" class="goal-card selected" data-goal="gain_weight">
+                <span class="goal-visual">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M12 19V5M12 5L7 10M12 5L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <span class="goal-copy">
+                  <strong>Gain weight</strong>
+                  <em>Focus on a healthy caloric surplus and nutrient-dense meals.</em>
+                </span>
+                <span class="goal-check">
+                  <svg viewBox="0 0 20 20" fill="none">
+                    <path d="M5 10.3L8.3 13.6L15 6.8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+              </button>
+            </div>
+
+            <input id="goal" type="hidden" value="gain_weight" />
+
+            <p class="goal-footer-note">You can change your goal anytime in Profile settings.</p>
+          </section>
+        </main>
+
+        <footer class="onboarding-actions">
+          <button type="button" class="onboarding-secondary-btn" id="prevBtn">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            Back
+          </button>
+
+          <button type="button" class="onboarding-primary-btn" id="nextBtn">
+            Continue
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+
+          <button type="submit" class="onboarding-primary-btn hidden" id="finishBtn">
+            Finish Setup
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M5 13L9 17L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </button>
+        </footer>
+      </form>
     </div>
   </div>
 
-  <script type="module" src="./js/pages/onboardingPage.js"></script>
+  <script type="module" src="./js/pages/onboardingPage.js?v=20260515-profile-sync"></script>
 </body>
 </html>

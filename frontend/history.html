@@ -3,240 +3,166 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PlateWise AI - History</title>
+
+  <title>PlateWise AI - Meal History</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+
   <link rel="stylesheet" href="style.css" />
-
-  <style>
-    .history-filter-card {
-      padding: 16px;
-    }
-
-    .history-filter-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .history-filter-header h3 {
-      margin: 0;
-    }
-
-    .filter-count-pill {
-      background: var(--primary-soft);
-      color: var(--primary-dark);
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 12px;
-      font-weight: 900;
-    }
-
-    .history-search-wrap {
-      position: relative;
-      margin-bottom: 12px;
-    }
-
-    .history-search-wrap input {
-      padding-left: 40px;
-      margin-bottom: 0;
-      height: 48px;
-      border-radius: 18px;
-      font-size: 15px;
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted);
-      font-size: 16px;
-    }
-
-    .quick-filter-row {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .quick-filter-btn {
-      flex: 1;
-      border: none;
-      border-radius: 999px;
-      padding: 9px 8px;
-      font-size: 12px;
-      font-weight: 900;
-      background: #fff7e8;
-      color: var(--primary-dark);
-      cursor: pointer;
-      border: 1px solid #eadfca;
-    }
-
-    .quick-filter-btn.active {
-      background: var(--primary);
-      color: white;
-      border-color: var(--primary);
-    }
-
-    .date-filter-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .date-field label {
-      display: block;
-      font-size: 13px;
-      margin: 0 0 6px;
-      color: var(--muted);
-      font-weight: 900;
-    }
-
-    .date-field input {
-      margin-bottom: 0;
-      height: 44px;
-      border-radius: 16px;
-      font-size: 14px;
-    }
-
-    .history-filter-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 4px;
-    }
-
-    .history-filter-actions button {
-      margin-top: 0;
-      height: 42px;
-      border-radius: 16px;
-      font-size: 14px;
-    }
-
-    .history-result-count {
-      font-size: 13px;
-      color: var(--muted);
-      margin-top: 12px;
-      text-align: center;
-      font-weight: 700;
-    }
-
-    .report-card-compact {
-      padding: 16px;
-    }
-
-    .report-title-line {
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-      justify-content: space-between;
-    }
-
-    .report-title-line h3 {
-      margin: 0;
-      line-height: 1.18;
-      max-width: 230px;
-    }
-
-    .report-date-line {
-      color: var(--muted);
-      font-size: 13px;
-      margin-top: 6px;
-    }
-
-    .history-nutrition-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin: 12px 0;
-    }
-
-    .history-nutrition-grid .nutrition-item {
-      padding: 10px 12px;
-    }
-
-    .history-summary-text {
-      line-height: 1.45;
-      font-size: 14px;
-      color: var(--text);
-      max-height: 96px;
-      overflow: hidden;
-    }
-
-    .history-foods {
-      font-size: 14px;
-      line-height: 1.35;
-      margin: 10px 0;
-    }
-  </style>
 </head>
 
 <body>
   <div class="phone-shell">
-    <div class="app-screen">
-      <div class="top-bar">
-        <h2>History</h2>
-        <span class="top-tag">Reports</span>
-      </div>
+    <div class="app-screen meal-history-screen">
+      <header class="meal-history-header" id="historyHeader">
+        <button type="button" class="meal-history-back" id="historyBackBtn" aria-label="Back">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
 
-      <div class="content with-bottom-nav scroll-area">
-        <div class="card history-filter-card">
-          <div class="history-filter-header">
-            <h3>Search Reports</h3>
-            <span class="filter-count-pill" id="historyResultCount">0 reports</span>
+        <h1>Meal History</h1>
+
+      </header>
+
+      <main class="meal-history-main" id="historyMain">
+        <section class="meal-history-search-row">
+          <div class="meal-history-search-box">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M10.75 18C14.754 18 18 14.754 18 10.75C18 6.746 14.754 3.5 10.75 3.5C6.746 3.5 3.5 6.746 3.5 10.75C3.5 14.754 6.746 18 10.75 18Z" stroke="currentColor" stroke-width="1.85" />
+              <path d="M16.2 16.2L20.5 20.5" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" />
+            </svg>
+            <input id="historySearchInput" type="search" placeholder="Search your meals..." autocomplete="off" />
           </div>
 
-          <div class="history-search-wrap">
-            <span class="search-icon">⌕</span>
-            <input
-              type="text"
-              id="historySearch"
-              placeholder="Search food, advice, risk..."
-            />
+          <button type="button" class="meal-history-filter-square" id="filterSquareBtn" aria-label="Open filters">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <path d="M7 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <path d="M10 17H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <circle cx="16" cy="7" r="1.9" fill="currentColor" />
+              <circle cx="9" cy="12" r="1.9" fill="currentColor" />
+              <circle cx="13" cy="17" r="1.9" fill="currentColor" />
+            </svg>
+          </button>
+        </section>
+
+        <section class="meal-history-filter-card hidden" id="historyFilterPanel">
+          <div class="meal-history-filter-title">
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M7 3V6M17 3V6M4.5 9H19.5M6.5 5H17.5C18.6 5 19.5 5.9 19.5 7V18C19.5 19.1 18.6 20 17.5 20H6.5C5.4 20 4.5 19.1 4.5 18V7C4.5 5.9 5.4 5 6.5 5Z" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+              </svg>
+            </span>
+            <strong>Filter by Date</strong>
           </div>
 
-          <div class="quick-filter-row">
-            <button class="quick-filter-btn active" id="filterAllBtn" type="button">All</button>
-            <button class="quick-filter-btn" id="filterTodayBtn" type="button">Today</button>
-            <button class="quick-filter-btn" id="filter7DaysBtn" type="button">7 Days</button>
+          <div class="meal-history-date-captions">
+            <span>START DATE</span>
+            <span>END DATE</span>
           </div>
 
-          <div class="date-filter-row">
-            <div class="date-field">
-              <label for="historyDateFrom">From</label>
-              <input type="date" id="historyDateFrom" />
-            </div>
+          <div class="meal-history-calendar-row">
+            <label class="meal-history-calendar-box">
+              <input id="historyStartDate" type="date" />
+              <span class="calendar-muted" id="historyStartTop">25 Sept 2022</span>
+              <strong id="historyStartBottom">26 Oct 2023</strong>
+            </label>
 
-            <div class="date-field">
-              <label for="historyDateTo">To</label>
-              <input type="date" id="historyDateTo" />
-            </div>
+            <label class="meal-history-calendar-box">
+              <input id="historyEndDate" type="date" />
+              <span class="calendar-muted" id="historyEndTop">29 Sept 2022</span>
+              <strong id="historyEndBottom">30 Oct 2023</strong>
+            </label>
           </div>
 
-          <div class="history-filter-actions">
-            <button class="secondary-btn" id="clearHistoryFiltersBtn" type="button">Clear</button>
-            <button class="primary-btn" id="applyHistoryFiltersBtn" type="button">Search</button>
+          <div class="meal-history-range-switch">
+            <button type="button" class="active" data-range="all">All</button>
+            <button type="button" data-range="today">Today</button>
+            <button type="button" data-range="7days">7 Days</button>
           </div>
-        </div>
 
-        <div id="historyContainer">
-          <div class="card">
-            <h3>Saved Reports</h3>
-            <p class="muted">Your generated meal reports will appear here.</p>
+          <div class="meal-history-filter-actions">
+            <button type="button" id="historyClearBtn">Clear</button>
+            <button type="button" id="historySearchBtn">Search</button>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div class="bottom-nav">
-        <a href="dashboard.html" class="nav-item">Dashboard</a>
-        <a href="chat.html" class="nav-item">Chat</a>
-        <a href="history.html" class="nav-item active">History</a>
-        <a href="profile.html" class="nav-item">Profile</a>
-      </div>
+        <section class="meal-history-list" id="historyMealList"></section>
+
+        <section class="meal-history-empty" id="historyEmptyState">
+          <h2>No reports found</h2>
+          <p id="historyEmptyText">Your meal history is currently empty. Start logging your daily nutrition to see detailed health insights here.</p>
+          <button type="button" id="historyFirstMealBtn">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+            </svg>
+            Log My First Meal
+          </button>
+        </section>
+
+        <section class="meal-history-info-cards" id="historyInfoCards">
+          <article>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M4 19V5M4 19H20" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" />
+                <path d="M8 15L11 12L14 14L19 8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <h3>Why Track History?</h3>
+            <p>Long-term tracking helps AI identify patterns in your energy levels and metabolic health.</p>
+          </article>
+
+          <article>
+            <span>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3L20 7V12C20 16.5 16.8 19.8 12 21C7.2 19.8 4 16.5 4 12V7L12 3Z" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" />
+                <path d="M9 12L11 14L15.5 9.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <h3>Expert Insights</h3>
+            <p>Once you log 3 meals, your personalized nutritionist AI will generate your first vitality report.</p>
+          </article>
+        </section>
+      </main>
+
+      <nav class="bottom-nav meal-history-nav">
+        <a href="dashboard.html" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 13H10V20H4V13ZM14 4H20V20H14V4ZM4 4H10V9H4V4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+          </svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="chat.html" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 5.5C4 4.67 4.67 4 5.5 4H18.5C19.33 4 20 4.67 20 5.5V14.5C20 15.33 19.33 16 18.5 16H9L5 20V16H5.5C4.67 16 4 15.33 4 14.5V5.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+          </svg>
+          <span>Chatbot</span>
+        </a>
+        <a href="history.html" class="nav-item active">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 8V12L15 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M4 12C4 7.58 7.58 4 12 4C16.42 4 20 7.58 20 12C20 16.42 16.42 20 12 20C9.58 20 7.4 18.92 5.94 17.22" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            <path d="M4 17V13H8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span>History</span>
+        </a>
+        <a href="profile.html" class="nav-item">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12Z" stroke="currentColor" stroke-width="1.8" />
+            <path d="M5 20C5.9 16.95 8.65 15 12 15C15.35 15 18.1 16.95 19 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
+          <span>Profile</span>
+        </a>
+      </nav>
     </div>
   </div>
 
-  <script type="module" src="./js/pages/historyPage.js"></script>
+  <script type="module" src="./js/pages/historyPage.js?v=20260516-history-search-sync-1"></script>
 </body>
 </html>

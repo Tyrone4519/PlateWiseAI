@@ -43,25 +43,37 @@ export async function upsertUserProfile(profile) {
     name: profile.name || null,
     age: profile.age ? Number(profile.age) : null,
     gender: profile.gender || null,
-    height_cm: profile.height ? Number(profile.height) : null,
-    weight_kg: profile.weight ? Number(profile.weight) : null,
+    height_cm: profile.height_cm || profile.height ? Number(profile.height_cm || profile.height) : null,
+    weight_kg: profile.weight_kg || profile.weight ? Number(profile.weight_kg || profile.weight) : null,
     goal: profile.goal || null,
+    activity_level: profile.activity_level || profile.activityLevel || profile.activity || null,
     restrictions: profile.restrictions || null,
-    health_notes: profile.healthNotes || null,
+    health_notes: profile.health_notes || profile.healthNotes || null,
   };
 
-  const { data, error } = await supabase
+  const result = await supabase
     .from('user_profiles')
     .upsert(payload, { onConflict: 'user_id' })
     .select()
     .single();
 
-  if (error) throw error;
-  return data;
+  if (!result.error) return result.data;
+
+  const fallbackPayload = { ...payload };
+  delete fallbackPayload.activity_level;
+
+  const fallbackResult = await supabase
+    .from('user_profiles')
+    .upsert(fallbackPayload, { onConflict: 'user_id' })
+    .select()
+    .single();
+
+  if (fallbackResult.error) throw fallbackResult.error;
+  return fallbackResult.data;
 }
 
 export async function getUserProfile() {
-  const appUser = await getAppUser();
+  const appUser = await ensureAppUser();
   if (!appUser) return null;
 
   const { data, error } = await supabase

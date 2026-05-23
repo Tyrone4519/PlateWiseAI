@@ -79,6 +79,10 @@ COMMON_FOOD_FALLBACKS = {
     "nuts": "nuts",
     "tree nuts": "nuts",
     "soy": "soy",
+    "tomato": "tomatoes",
+    "tomatoes": "tomatoes",
+    "tomatos": "tomatoes",
+    "tomotaes": "tomatoes",
     "虾": "shrimp",
     "花生": "peanut",
     "鸡蛋": "egg",
@@ -333,6 +337,10 @@ def build_food_lookup(food_library: dict) -> dict[str, str]:
             normalized = normalize_text(term)
             if normalized:
                 lookup[normalized] = canonical_name
+                if normalized.endswith("es"):
+                    lookup.setdefault(normalized[:-2], canonical_name)
+                elif normalized.endswith("s") and len(normalized) > 3:
+                    lookup.setdefault(normalized[:-1], canonical_name)
 
     return lookup
 

@@ -1,110 +1,15 @@
 import { supabase } from "../lib/supabaseClient.js";
 import { getCurrentSession } from "../lib/auth.js";
 import { redirectIfNoSession } from "../lib/router.js";
-import { $, escapeHtml, formatDateTime } from "../lib/utils.js";
+import { $, showToast } from "../lib/utils.js";
 
-let allRecords = [];
+const DETAIL_PAGE = "meal-detail.html";
+const SELECTED_REPORT_STORAGE_KEY = "platewise_selected_report";
 
-function riskClass(risk) {
-  if (risk === "high") return "high";
-  if (risk === "medium") return "medium";
-  if (risk === "low") return "low";
-  return "";
-}
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function dateISO(offsetDays = 0) {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
-}
-
-function normalizeText(value) {
-  return String(value || "").toLowerCase().trim();
-}
-
-function toISODate(value) {
-  if (!value) return "";
-
-  const raw = String(value).trim();
-
-  // Already ISO: 2026-04-25
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
-    return raw.slice(0, 10);
-  }
-
-  // Browser display or old text: 25/04/2026
-  const slashMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (slashMatch) {
-    const day = slashMatch[1].padStart(2, "0");
-    const month = slashMatch[2].padStart(2, "0");
-    const year = slashMatch[3];
-    return `${year}-${month}-${day}`;
-  }
-
-  // Try normal Date fallback
-  const d = new Date(raw);
-  if (!Number.isNaN(d.getTime())) {
-    return d.toISOString().slice(0, 10);
-  }
-
-  return "";
-}
-
-function getRecordDate(record) {
-  return toISODate(record.report_date || record.created_at);
-}
-
-function recordSearchText(record) {
-  const items = record.report_items || [];
-  const summaries = record.report_summaries || [];
-
-  const itemText = items
-    .map((item) => [
-      item.food_name,
-      item.notes,
-      item.portion_unit,
-      item.calories,
-      item.sodium_mg,
-      item.sugar_g,
-      item.carbs_g,
-      item.fat_g,
-      item.protein_g,
-    ].join(" "))
-    .join(" ");
-
-  const summaryText = summaries
-    .map((summary) => JSON.stringify(summary.summary_json || {}))
-    .join(" ");
-
-  return normalizeText(`
-    ${record.title || ""}
-    ${record.report_date || ""}
-    ${record.created_at || ""}
-    ${record.risk_level || ""}
-    ${record.final_summary || ""}
-    ${record.recommendation || ""}
-    ${record.total_calories || ""}
-    ${record.total_sodium_mg || ""}
-    ${record.total_sugar_g || ""}
-    ${record.total_carbs_g || ""}
-    ${record.total_fat_g || ""}
-    ${record.total_protein_g || ""}
-    ${itemText}
-    ${summaryText}
-  `);
-}
-
-function setActiveQuickFilter(activeId) {
-  ["filterAllBtn", "filterTodayBtn", "filter7DaysBtn"].forEach((id) => {
-    const btn = $(id);
-    if (!btn) return;
-    btn.classList.toggle("active", id === activeId);
-  });
-}
+let reports = [];
+let activeRange = "all";
+let filtersOpen = false;
+let historySearchFrame = null;
 
 async function getAppUser() {
   const {
@@ -126,237 +31,757 @@ async function getAppUser() {
   return appUser;
 }
 
-async function getReports(appUserId) {
-  const { data, error } = await supabase
-    .from("reports")
-    .select(`
-      *,
-      report_items(*),
-      report_summaries(*)
-    `)
-    .eq("user_id", appUserId)
-    .order("created_at", { ascending: false });
+function setupDatePickers() {
+  const dateConfigs = [
+    {
+      boxSelector: ".meal-history-calendar-box:first-child",
+      inputId: "historyStartDate",
+    },
+    {
+      boxSelector: ".meal-history-calendar-box:last-child",
+      inputId: "historyEndDate",
+    },
+  ];
 
-  if (error) throw error;
-  return data || [];
+  dateConfigs.forEach(({ boxSelector, inputId }) => {
+    const box = document.querySelector(boxSelector);
+    const input = $(inputId);
+
+    if (!box || !input) return;
+
+    box.addEventListener("click", () => {
+      if (typeof input.showPicker === "function") {
+        input.showPicker();
+      } else {
+        input.focus();
+        input.click();
+      }
+    });
+  });
 }
 
-function getFilters() {
+function safeNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function toDate(value) {
+  if (!value) return null;
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toDateInputValue(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function escapeHTML(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function getReportId(report, fallbackIndex = 0) {
+  return (
+    report?.id ||
+    report?.report_id ||
+    report?.meal_report_id ||
+    report?.uuid ||
+    `local-${fallbackIndex}`
+  );
+}
+
+function titleOf(report) {
+  if (!report) return "Meal Report";
+
+  return (
+    report.meal_name ||
+    report.title ||
+    report.food_name ||
+    report.name ||
+    report.recipe_name ||
+    report.dish_name ||
+    report.report_title ||
+    report.final_title ||
+    report.detected_food ||
+    getFirstItemName(report) ||
+    "Meal Report"
+  );
+}
+
+function getFirstItemName(report) {
+  const items = Array.isArray(report?.report_items) ? report.report_items : [];
+  const first = items[0];
+
+  return (
+    first?.food_name ||
+    first?.name ||
+    first?.item_name ||
+    first?.title ||
+    ""
+  );
+}
+
+function dateOf(report) {
+  return (
+    report?.created_at ||
+    report?.createdAt ||
+    report?.updated_at ||
+    report?.date ||
+    report?.meal_date ||
+    report?.report_date
+  );
+}
+
+function imageOf(report) {
+  const items = Array.isArray(report?.report_items) ? report.report_items : [];
+  const firstItem = items[0] || {};
+
+  return (
+    report?.image_url ||
+    report?.photo_url ||
+    report?.meal_image_url ||
+    report?.image ||
+    report?.imageUrl ||
+    firstItem?.image_url ||
+    firstItem?.photo_url ||
+    firstItem?.image ||
+    ""
+  );
+}
+
+function nutritionOf(report) {
+  const nutrition = report?.nutrition || report?.nutrition_facts || {};
+  const summary = Array.isArray(report?.report_summaries)
+    ? report.report_summaries[0]?.summary_json || {}
+    : {};
+
   return {
-    keyword: normalizeText($("historySearch")?.value || ""),
-    from: toISODate($("historyDateFrom")?.value || ""),
-    to: toISODate($("historyDateTo")?.value || ""),
+    calories: safeNumber(
+      report?.total_calories ??
+        report?.calories ??
+        report?.kcal ??
+        nutrition?.calories ??
+        nutrition?.kcal ??
+        summary?.calories ??
+        summary?.total_calories
+    ),
+    protein: safeNumber(
+      report?.total_protein_g ??
+        report?.protein_g ??
+        report?.protein ??
+        nutrition?.protein ??
+        nutrition?.protein_g ??
+        summary?.protein ??
+        summary?.protein_g ??
+        summary?.total_protein_g
+    ),
+    carbs: safeNumber(
+      report?.total_carbs_g ??
+        report?.carbs_g ??
+        report?.carbs ??
+        report?.carbohydrates ??
+        nutrition?.carbs ??
+        nutrition?.carbs_g ??
+        summary?.carbs ??
+        summary?.carbs_g ??
+        summary?.total_carbs_g
+    ),
+    fat: safeNumber(
+      report?.total_fat_g ??
+        report?.fat_g ??
+        report?.fat ??
+        nutrition?.fat ??
+        nutrition?.fat_g ??
+        summary?.fat ??
+        summary?.fat_g ??
+        summary?.total_fat_g
+    ),
   };
 }
 
-function filterRecords(records) {
-  const { keyword, from, to } = getFilters();
+function formatDateWithTime(value) {
+  const date = toDate(value);
+  if (!date) return "Unknown date";
 
-  return records.filter((record) => {
-    const recordDate = getRecordDate(record);
-
-    if (from && recordDate && recordDate < from) return false;
-    if (to && recordDate && recordDate > to) return false;
-
-    if (keyword) {
-      const combined = recordSearchText(record);
-      if (!combined.includes(keyword)) return false;
-    }
-
-    return true;
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
 
-function renderResultCount(records) {
-  const resultCount = $("historyResultCount");
-  if (!resultCount) return;
+function prettyCalendarDate(value, fallback = "Select date") {
+  if (!value) return fallback;
 
-  const total = allRecords.length;
-  const shown = records.length;
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return fallback;
 
-  if (!total) {
-    resultCount.textContent = "0 reports";
+  return date.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function normalizeSearchText(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replace(/[\u2026]+/g, " ")
+    .replace(/[_/.,;:!?()[\]{}'"`~|\\-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function flattenSearchValues(value) {
+  if (value == null) return "";
+
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(flattenSearchValues).join(" ");
+  }
+
+  if (typeof value === "object") {
+    return Object.values(value).map(flattenSearchValues).join(" ");
+  }
+
+  return "";
+}
+
+function asArray(value) {
+  if (Array.isArray(value)) return value;
+  if (value == null) return [];
+  return [value];
+}
+
+function ingredientSearchTextFromMeal(meal) {
+  const ingredients = Array.isArray(meal?.ingredients) ? meal.ingredients : [];
+  return ingredients
+    .map((ingredient) =>
+      [
+        ingredient?.name,
+        ingredient?.food_name,
+        ingredient?.item_name,
+        ingredient?.title,
+      ].join(" ")
+    )
+    .join(" ");
+}
+
+function getSearchableText(report) {
+  const itemsText = asArray(report?.report_items)
+    .map((item) =>
+      [
+        item?.food_name,
+        item?.name,
+        item?.item_name,
+        item?.title,
+        item?.ingredients,
+      ].join(" ")
+    )
+    .join(" ");
+
+  const summaryIngredientsText = asArray(report?.report_summaries)
+    .map((summary) => ingredientSearchTextFromMeal(summary?.summary_json?.meal))
+    .join(" ");
+
+  return normalizeSearchText(
+    [
+      titleOf(report),
+      getFirstItemName(report),
+      report?.meal_name,
+      report?.title,
+      report?.food_name,
+      report?.name,
+      report?.recipe_name,
+      report?.dish_name,
+      report?.ingredients,
+      report?.detected_items,
+      flattenSearchValues(report?.nutrition),
+      itemsText,
+      summaryIngredientsText,
+    ].join(" ")
+  );
+}
+
+function searchMatches(report, query) {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return true;
+
+  const searchableText = getSearchableText(report);
+  return normalizedQuery
+    .split(" ")
+    .filter(Boolean)
+    .every((term) => searchableText.includes(term));
+}
+
+function rangeMatches(report) {
+  if (activeRange === "all") return true;
+
+  const date = toDate(dateOf(report));
+  if (!date) return false;
+
+  const now = new Date();
+
+  if (activeRange === "today") {
+    return date.toDateString() === now.toDateString();
+  }
+
+  if (activeRange === "7days") {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - 6);
+
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+
+    return date >= start && date <= end;
+  }
+
+  return true;
+}
+
+function dateInputsMatch(report) {
+  const startValue = $("historyStartDate")?.value;
+  const endValue = $("historyEndDate")?.value;
+
+  if (!startValue && !endValue) return true;
+
+  const date = toDate(dateOf(report));
+  if (!date) return !startValue && !endValue;
+
+  if (startValue) {
+    const start = new Date(`${startValue}T00:00:00`);
+    if (date < start) return false;
+  }
+
+  if (endValue) {
+    const end = new Date(`${endValue}T23:59:59`);
+    if (date > end) return false;
+  }
+
+  return true;
+}
+
+function filteredReports() {
+  const query = $("historySearchInput")?.value.trim() || "";
+  const normalizedQuery = normalizeSearchText(query);
+  const hasDateFilter = Boolean($("historyStartDate")?.value || $("historyEndDate")?.value);
+
+  return reports.filter((report) => {
+    const matchesQuery = normalizedQuery ? searchMatches(report, normalizedQuery) : true;
+    const matchesDate = hasDateFilter ? dateInputsMatch(report) : true;
+    return matchesQuery && matchesDate;
+  });
+}
+
+function scheduleRenderHistory() {
+  if (historySearchFrame) {
+    cancelAnimationFrame(historySearchFrame);
+  }
+
+  historySearchFrame = requestAnimationFrame(() => {
+    historySearchFrame = null;
+    renderHistory();
+  });
+}
+
+function updateCalendarLabels() {
+  const startValue = $("historyStartDate")?.value;
+  const endValue = $("historyEndDate")?.value;
+
+  if ($("historyStartTop")) {
+    $("historyStartTop").textContent = "Start";
+  }
+
+  if ($("historyStartBottom")) {
+    $("historyStartBottom").textContent = prettyCalendarDate(startValue, "Choose start");
+  }
+
+  if ($("historyEndTop")) {
+    $("historyEndTop").textContent = "End";
+  }
+
+  if ($("historyEndBottom")) {
+    $("historyEndBottom").textContent = prettyCalendarDate(endValue, "Choose end");
+  }
+}
+
+function setDefaultDateRange() {
+  if ($("historyStartDate")) $("historyStartDate").value = "";
+  if ($("historyEndDate")) $("historyEndDate").value = "";
+
+  activeRange = "all";
+
+  document.querySelectorAll(".meal-history-range-switch button[data-range]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.range === "all");
+  });
+
+  updateCalendarLabels();
+}
+
+function clearDateInputs() {
+  if ($("historyStartDate")) $("historyStartDate").value = "";
+  if ($("historyEndDate")) $("historyEndDate").value = "";
+  updateCalendarLabels();
+}
+
+function applyRange(range) {
+  activeRange = range || "all";
+
+  const now = new Date();
+  const start = new Date();
+
+  if (activeRange === "all") {
+    clearDateInputs();
+  }
+
+  if (activeRange === "today") {
+    const today = toDateInputValue(now);
+
+    if ($("historyStartDate")) $("historyStartDate").value = today;
+    if ($("historyEndDate")) $("historyEndDate").value = today;
+  }
+
+  if (activeRange === "7days") {
+    start.setDate(now.getDate() - 6);
+
+    if ($("historyStartDate")) $("historyStartDate").value = toDateInputValue(start);
+    if ($("historyEndDate")) $("historyEndDate").value = toDateInputValue(now);
+  }
+
+  document.querySelectorAll(".meal-history-range-switch button[data-range]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.range === activeRange);
+  });
+
+  updateCalendarLabels();
+  renderHistory();
+}
+
+function setFilterMode(open) {
+  filtersOpen = Boolean(open);
+
+  $("historyFilterPanel")?.classList.toggle("hidden", !filtersOpen);
+  $("historyBackBtn")?.classList.toggle("visible", filtersOpen);
+  $("historyMain")?.classList.toggle("filter-mode", filtersOpen);
+
+  const squareBtn = $("filterSquareBtn");
+  if (squareBtn) {
+    squareBtn.classList.toggle("active", filtersOpen);
+    squareBtn.setAttribute("aria-expanded", String(filtersOpen));
+  }
+}
+
+function toggleFilterMode() {
+  setFilterMode(!filtersOpen);
+}
+
+function makeThumb(report, index) {
+  const image = imageOf(report);
+
+  if (image) {
+    return `<img src="${escapeHTML(image)}" alt="${escapeHTML(titleOf(report))}" />`;
+  }
+
+  return `
+    <div class="meal-history-thumb-placeholder variant-${(index % 5) + 1}">
+      <span></span><span></span><span></span><span></span>
+    </div>
+  `;
+}
+
+function renderMealCard(report, index) {
+  const nutrition = nutritionOf(report);
+  const title = escapeHTML(titleOf(report));
+  const date = escapeHTML(formatDateWithTime(dateOf(report)));
+  const reportId = escapeHTML(getReportId(report, index));
+  const searchText = escapeHTML(getSearchableText(report));
+
+  return `
+    <article class="meal-history-card" data-report-id="${reportId}" data-search-text="${searchText}" role="button" tabindex="0" aria-label="Open ${title} details">
+      <div class="meal-history-thumb">
+        ${makeThumb(report, index)}
+      </div>
+
+      <div class="meal-history-card-main">
+        <div class="meal-history-card-top">
+          <h2>${title}</h2>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+
+        <p>${date}</p>
+
+        <div class="meal-history-macros">
+          <span><em>CALS</em><strong>${Math.round(nutrition.calories)}</strong></span>
+          <span><em>PROT</em><strong>${Math.round(nutrition.protein)}g</strong></span>
+          <span><em>CARB</em><strong>${Math.round(nutrition.carbs)}g</strong></span>
+          <span><em>FAT</em><strong>${Math.round(nutrition.fat)}g</strong></span>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function openReportDetails(reportId) {
+  const report = reports.find((item, index) => String(getReportId(item, index)) === String(reportId));
+
+  if (!report) {
+    showToast("Could not open this meal report.", true);
     return;
   }
 
-  resultCount.textContent = `${shown} / ${total}`;
+  localStorage.setItem(SELECTED_REPORT_STORAGE_KEY, JSON.stringify(report));
+
+  const realId = report.id || report.report_id || report.meal_report_id;
+  const query = realId ? `?id=${encodeURIComponent(realId)}` : "";
+
+  window.location.href = `${DETAIL_PAGE}${query}`;
 }
 
-function renderRecords(records) {
-  const container = $("historyContainer");
-  if (!container) return;
+function bindMealCardEvents() {
+  document.querySelectorAll(".meal-history-card[data-report-id]").forEach((card) => {
+    card.addEventListener("click", () => {
+      openReportDetails(card.dataset.reportId);
+    });
 
-  renderResultCount(records);
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openReportDetails(card.dataset.reportId);
+      }
+    });
+  });
+}
 
-  if (!records.length) {
-    container.innerHTML = `
-      <div class="card empty-state-card">
-        <h3>No reports found</h3>
-        <p class="muted">Try another keyword or date range.</p>
-      </div>
-    `;
+function applyVisibleSearchFilter() {
+  const list = $("historyMealList");
+  const empty = $("historyEmptyState");
+  const info = $("historyInfoCards");
+  const query = normalizeSearchText($("historySearchInput")?.value || "");
+  const terms = query.split(" ").filter(Boolean);
+  const cards = Array.from(document.querySelectorAll(".meal-history-card"));
+
+  if (!list || cards.length === 0) return false;
+
+  let visibleCount = 0;
+
+  cards.forEach((card) => {
+    const haystack = card.dataset.searchText || "";
+    const matches = terms.length === 0 || terms.every((term) => haystack.includes(term));
+
+    card.classList.toggle("hidden", !matches);
+    if (matches) visibleCount += 1;
+  });
+
+  list.classList.toggle("hidden", visibleCount === 0);
+  empty?.classList.toggle("hidden", visibleCount > 0);
+
+  if (visibleCount === 0 && $("historyEmptyText")) {
+    $("historyEmptyText").textContent = "We couldn't find any meal logs for this search. Try a different keyword.";
+  }
+
+  if (visibleCount > 0) {
+    info?.classList.add("hidden");
+  }
+
+  return true;
+}
+
+function renderHistory() {
+  const list = $("historyMealList");
+  const empty = $("historyEmptyState");
+  const info = $("historyInfoCards");
+
+  if (!list || !empty) return;
+
+  const visibleReports = filteredReports();
+
+  const hasFilters = Boolean(
+    $("historySearchInput")?.value.trim() ||
+      $("historyStartDate")?.value ||
+      $("historyEndDate")?.value
+  );
+
+  if (visibleReports.length) {
+    list.innerHTML = visibleReports.map(renderMealCard).join("");
+    bindMealCardEvents();
+
+    list.classList.remove("hidden");
+    empty.classList.add("hidden");
+    info?.classList.add("hidden");
     return;
   }
 
-  container.innerHTML = records.map((record) => {
-    const items = record.report_items || [];
-    const itemText = items.length
-      ? items.slice(0, 6).map((i) => i.food_name).filter(Boolean).join(", ")
-      : "No item details";
+  list.innerHTML = "";
+  list.classList.add("hidden");
+  empty.classList.remove("hidden");
 
-    const recordDate = getRecordDate(record);
-    const dateLabel = recordDate
-      ? `${recordDate} · ${formatDateTime(record.created_at)}`
-      : formatDateTime(record.created_at);
+  if ($("historyEmptyText")) {
+    $("historyEmptyText").textContent = hasFilters
+      ? "We couldn't find any meal logs for this selection. Try adjusting your date range or using different keywords."
+      : "Your meal history is currently empty. Start logging your daily nutrition to see detailed health insights here.";
+  }
 
-    const calories = Math.round(Number(record.total_calories || 0));
-    const sodium = Math.round(Number(record.total_sodium_mg || 0));
-    const sugar = Math.round(Number(record.total_sugar_g || 0));
-    const carbs = Math.round(Number(record.total_carbs_g || 0));
-
-    return `
-      <div class="card report-card-compact">
-        <div class="report-title-line">
-          <div>
-            <h3>${escapeHtml(record.title || "Meal Report")}</h3>
-            <div class="report-date-line">${escapeHtml(dateLabel)}</div>
-          </div>
-          <span class="risk-pill ${riskClass(record.risk_level)}">
-            ${escapeHtml(record.risk_level || "unknown")}
-          </span>
-        </div>
-
-        ${record.image_url ? `
-          <img class="report-image" src="${escapeHtml(record.image_url)}" alt="Meal image" />
-        ` : ""}
-
-        <p class="history-foods"><strong>Foods:</strong> ${escapeHtml(itemText)}</p>
-
-        <div class="history-nutrition-grid">
-          <div class="nutrition-item">
-            <strong>${calories}</strong>
-            <span>Calories</span>
-          </div>
-          <div class="nutrition-item">
-            <strong>${sodium} mg</strong>
-            <span>Sodium</span>
-          </div>
-          <div class="nutrition-item">
-            <strong>${sugar} g</strong>
-            <span>Sugar</span>
-          </div>
-          <div class="nutrition-item">
-            <strong>${carbs} g</strong>
-            <span>Carbs</span>
-          </div>
-        </div>
-
-        <p class="history-summary-text">
-          <strong>Summary:</strong> ${escapeHtml(record.final_summary || "-")}
-        </p>
-
-        <p class="history-summary-text">
-          <strong>Recommendation:</strong> ${escapeHtml(record.recommendation || "-")}
-        </p>
-      </div>
-    `;
-  }).join("");
+  if (filtersOpen || hasFilters) {
+    info?.classList.add("hidden");
+  } else {
+    info?.classList.remove("hidden");
+  }
 }
 
-function applyFilters() {
-  const filtered = filterRecords(allRecords);
-  renderRecords(filtered);
-}
+function setupEvents() {
+  $("filterSquareBtn")?.addEventListener("click", toggleFilterMode);
+  $("historyBackBtn")?.addEventListener("click", () => setFilterMode(false));
 
-function clearFilters() {
-  if ($("historySearch")) $("historySearch").value = "";
-  if ($("historyDateFrom")) $("historyDateFrom").value = "";
-  if ($("historyDateTo")) $("historyDateTo").value = "";
-
-  setActiveQuickFilter("filterAllBtn");
-  renderRecords(allRecords);
-}
-
-function setTodayFilter() {
-  const today = todayISO();
-
-  $("historyDateFrom").value = today;
-  $("historyDateTo").value = today;
-
-  setActiveQuickFilter("filterTodayBtn");
-  applyFilters();
-}
-
-function setLast7DaysFilter() {
-  $("historyDateFrom").value = dateISO(-6);
-  $("historyDateTo").value = todayISO();
-
-  setActiveQuickFilter("filter7DaysBtn");
-  applyFilters();
-}
-
-function setAllFilter() {
-  $("historyDateFrom").value = "";
-  $("historyDateTo").value = "";
-
-  setActiveQuickFilter("filterAllBtn");
-  applyFilters();
-}
-
-function setupFilters() {
-  $("applyHistoryFiltersBtn")?.addEventListener("click", applyFilters);
-  $("clearHistoryFiltersBtn")?.addEventListener("click", clearFilters);
-
-  $("filterAllBtn")?.addEventListener("click", setAllFilter);
-  $("filterTodayBtn")?.addEventListener("click", setTodayFilter);
-  $("filter7DaysBtn")?.addEventListener("click", setLast7DaysFilter);
-
-  $("historySearch")?.addEventListener("keydown", (event) => {
+  $("historySearchInput")?.addEventListener("input", () => {
+    applyVisibleSearchFilter();
+    scheduleRenderHistory();
+  });
+  $("historySearchInput")?.addEventListener("keyup", () => {
+    applyVisibleSearchFilter();
+    scheduleRenderHistory();
+  });
+  $("historySearchInput")?.addEventListener("search", () => {
+    applyVisibleSearchFilter();
+    scheduleRenderHistory();
+  });
+  $("historySearchInput")?.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
-      applyFilters();
+      event.preventDefault();
+      renderHistory();
     }
   });
 
-  // 这里保留自动筛选，让用户不用每次都点 Search
-  $("historySearch")?.addEventListener("input", applyFilters);
-  $("historyDateFrom")?.addEventListener("change", () => {
-    setActiveQuickFilter("");
-    applyFilters();
+  document.addEventListener("input", (event) => {
+    if (event.target?.id === "historySearchInput") {
+      applyVisibleSearchFilter();
+      scheduleRenderHistory();
+    }
   });
-  $("historyDateTo")?.addEventListener("change", () => {
-    setActiveQuickFilter("");
-    applyFilters();
+
+  document.addEventListener("keyup", (event) => {
+    if (event.target?.id === "historySearchInput") {
+      applyVisibleSearchFilter();
+      scheduleRenderHistory();
+    }
   });
+
+  document.addEventListener("search", (event) => {
+    if (event.target?.id === "historySearchInput") {
+      applyVisibleSearchFilter();
+      scheduleRenderHistory();
+    }
+  });
+
+  $("historyStartDate")?.addEventListener("change", () => {
+    activeRange = "custom";
+
+    document.querySelectorAll(".meal-history-range-switch button[data-range]").forEach((button) => {
+      button.classList.remove("active");
+    });
+
+    updateCalendarLabels();
+    renderHistory();
+  });
+
+  $("historyEndDate")?.addEventListener("change", () => {
+    activeRange = "custom";
+
+    document.querySelectorAll(".meal-history-range-switch button[data-range]").forEach((button) => {
+      button.classList.remove("active");
+    });
+
+    updateCalendarLabels();
+    renderHistory();
+  });
+
+  document.querySelectorAll(".meal-history-range-switch button[data-range]").forEach((button) => {
+    button.addEventListener("click", () => {
+      applyRange(button.dataset.range || "all");
+    });
+  });
+
+  $("historyClearBtn")?.addEventListener("click", () => {
+    if ($("historySearchInput")) $("historySearchInput").value = "";
+
+    activeRange = "all";
+
+    document.querySelectorAll(".meal-history-range-switch button[data-range]").forEach((button) => {
+      button.classList.toggle("active", button.dataset.range === "all");
+    });
+
+    clearDateInputs();
+    renderHistory();
+  });
+
+  $("historySearchBtn")?.addEventListener("click", () => {
+    renderHistory();
+    setFilterMode(false);
+  });
+
+  $("historyFirstMealBtn")?.addEventListener("click", () => {
+    window.location.href = "chat.html";
+  });
+}
+
+async function loadReports() {
+  try {
+    const appUser = await getAppUser();
+
+    const { data, error } = await supabase
+      .from("reports")
+      .select(`
+        *,
+        report_items(*),
+        report_summaries(*)
+      `)
+      .eq("user_id", appUser.id)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    reports = Array.isArray(data) ? data : [];
+
+    reports.sort((a, b) => {
+      const dateA = toDate(dateOf(a))?.getTime() || 0;
+      const dateB = toDate(dateOf(b))?.getTime() || 0;
+      return dateB - dateA;
+    });
+
+    renderHistory();
+  } catch (error) {
+    console.error("Failed to load meal history:", error);
+    showToast(error.message || "Failed to load meal history.", true);
+    reports = [];
+    renderHistory();
+  }
 }
 
 async function boot() {
   const session = await getCurrentSession().catch(() => null);
   if (redirectIfNoSession(session)) return;
 
-  try {
-    const appUser = await getAppUser();
-    allRecords = await getReports(appUser.id);
+  setupEvents();
+  setupDatePickers();
+  setDefaultDateRange();
 
-    renderRecords(allRecords);
-    setupFilters();
-  } catch (error) {
-    console.error(error);
-
-    const container = $("historyContainer");
-    if (container) {
-      container.innerHTML = `
-        <div class="card empty-state-card">
-          <h3>Could not load history</h3>
-          <p class="muted">${escapeHtml(error.message || "Unknown error")}</p>
-        </div>
-      `;
-    }
-
-    const resultCount = $("historyResultCount");
-    if (resultCount) {
-      resultCount.textContent = "Failed";
-    }
-  }
+  await loadReports();
 }
 
 boot();

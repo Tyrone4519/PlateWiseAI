@@ -6,13 +6,13 @@ import uuid
 from functools import lru_cache
 from pathlib import Path
 
-import requests
 import streamlit as st
 from PIL import Image
+import pandas as pd
 
 from condition_extractor import extract_condition_entities
 from goal_update_intent import parse_sequential_goal_update
-from intent_recognition_defs import load_food_library, process_user_input, recognize_user_intent
+from intent_recognition_defs import extract_allergy_entities, extract_food_entities, load_food_library, recognize_user_intent
 from weight_update_intent import parse_sequential_weight_update
 
 try:
@@ -23,8 +23,8 @@ except ImportError:  # pragma: no cover - handled in UI
 
 BASE_DIR = Path(__file__).resolve().parent
 WHO_KB_PATH = BASE_DIR / "who_knowledge.json"
-FOOD_ENTITY_PATH = BASE_DIR / "nutrition5k_food_entity_library.json"
-USDA_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search"
+FOOD_LIBRARY_PATH = BASE_DIR / "nutrition5k_food_entity_library.json"
+# USDA_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search"
 
 FOOD_CLASS_DEFAULTS = {
     "protein": {"estimated_grams": 90, "estimated_sodium_mg": 90, "estimated_calories": 180, "estimated_carbs_g": 0, "estimated_sugar_g": 0, "estimated_fat_g": 9},
@@ -40,11 +40,27 @@ FOOD_CLASS_DEFAULTS = {
 }
 
 MEAL_DETECTION_PROMPT = """
-You are analyzing a food image.
+You are a professional nutrition analysis assistant specializing in multimodal food recognition.
 
-Identify the dish and estimate the portion size.
+Task:
+Analyze the provided food image and return a structured JSON object. 
+Your primary goal is to identify food items and map them to names that exist in the **Local USDA Database** provided below.
 
-Return JSON only in this format:
+Recognition Guidelines:
+For each food item, distinguish between what is clearly visible and what is inferred.
+- **Visible Ingredients**: Items you are >90% certain of based on visual features (e.g., "white rice", "green broccoli").
+- **Uncertain/Inferred**: Items that are partially obscured, mixed, or logically expected but visually ambiguous (e.g., hidden oils, seasoning, or the specific type of a liquid).
+
+Local USDA Mapping Logic (Priority):
+1. **Direct Match**: Identify the food (e.g., "boiled egg") and map it to the most specific category name in the provided list (e.g., "egg").
+2. **Semantic Fallback**: If a specific brand or preparation method is not in the list, map it to the most similar generic ingredient (e.g., "Grilled Chicken Breast" -> "chicken").
+3. **USDA Table Priority**: Ensure the `name` field in your JSON output uses terms that are likely to appear in the local USDA database to ensure high retrieval success.
+
+### Fallback Strategy (If ingredient is missing from provided list):
+- **Category Analogy**: Use a generic category average (e.g., if "Yellow Dragon Fruit" is missing, use "fruit").
+- **Knowledge-Based Estimation**: If the item is completely absent, provide the entry based on your internal training data. The system will automatically tag these as AI-estimated.
+
+Return JSON only:
 {
   "dish_name": "dish name",
   "dish_estimated_grams": 400,
@@ -54,16 +70,15 @@ Return JSON only in this format:
 }
 
 Rules:
-1. dish_name should be the common dish name.
-2. dish_estimated_grams is the total weight of the dish.
-3. ingredients must be simple standardized food names suitable for nutrition databases such as USDA.
-4. Include oils, sauces, dressings, or broth if visible because they affect nutrition.
-5. estimated_grams must be numbers.
-6. Do not estimate calories, sodium, sugar, fat, or carbs in the JSON.
-7. Ignore bowls, plates, chopsticks, utensils.
-8. Do not include explanations or markdown.
-
-Return JSON only.
+1. First recognize the actual food (e.g., "grilled corn").
+2. Then map it to the closest label from the provided list (e.g., "corn").
+3. Do NOT map to unrelated foods.
+4. If no good match exists, choose the closest semantic match, not random.
+5. If the item is a liquid in a cup or glass, prioritize mapping it to drinks categories. Do not label drinking liquids as 'sauce' unless they are in small dipping containers.
+6. Use simple names (e.g., "corn", not "grilled corn with butter").
+7. Use singular form.
+9. Do NOT estimate nutrition values.
+10. Return JSON only.
 """
 
 MEAL_RECALCULATION_PROMPT = """
@@ -109,46 +124,168 @@ def get_condition_guidance_entries(conditions: list[str], kb: list[dict]) -> lis
     return [item for item in condition_guidance_items(kb) if item.get("condition") in condition_set]
 
 
-@lru_cache(maxsize=1)
-def load_food_entities() -> dict:
-    with FOOD_ENTITY_PATH.open("r", encoding="utf-8") as f:
-        return json.load(f).get("foods", {})
-
-
-@lru_cache(maxsize=1)
-def load_intent_food_library() -> dict:
-    return load_food_library(FOOD_ENTITY_PATH)
-
-
 def contains_cjk(text: str) -> bool:
     return bool(re.search(r"[\u4e00-\u9fff]", text))
 
 
 def normalize_token(text: str) -> str:
-    return re.sub(r"[^a-z0-9 ]+", " ", text.lower()).strip()
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]+", " ", text.lower())).strip()
 
 
-def classify_food(name: str) -> tuple[str, dict]:
-    foods = load_food_entities()
+FOOD_CANONICAL_ALIASES = {
+    "prawn": "shrimp",
+    "prawns": "shrimp",
+    "shrimps": "shrimp",
+    "peanuts": "peanut",
+    "eggs": "egg",
+    "tree nut": "nuts",
+    "tree nuts": "nuts",
+    "tomatoes": "tomato",
+    "tomatos": "tomato",
+    "tomatoe": "tomato",
+    "tomatoe s": "tomato",
+    "tomotaes": "tomato",
+    "cherry tomato": "tomato",
+    "cherry tomatoes": "tomato",
+    "courgette": "zucchini",
+    "courgettes": "zucchini",
+    "noodles": "noodle",
+    "rice": "rice",
+    "potatoes": "potato",
+    "fries": "french fry",
+    "chips": "french fry",
+    "carrots": "carrot",
+    "cucumbers": "cucumber",
+    "lettuces": "lettuce",
+    "beans": "bean",
+    "bean sprouts": "bean sprout",
+    "lychees": "lychee",
+    "lyche": "lychee",
+}
+
+
+def singularize_food_token(text: str) -> str:
+    normalized = normalize_token(text)
+    if normalized in FOOD_CANONICAL_ALIASES:
+        return FOOD_CANONICAL_ALIASES[normalized]
+    if normalized.endswith("ies") and len(normalized) > 4:
+        return normalized[:-3] + "y"
+    if normalized.endswith("oes") and len(normalized) > 4:
+        return normalized[:-2]
+    if normalized.endswith("es") and len(normalized) > 4:
+        return normalized[:-2]
+    if normalized.endswith("s") and len(normalized) > 3:
+        return normalized[:-1]
+    return normalized
+
+
+def canonical_food_name(name: str) -> str:
     normalized = normalize_token(name)
     if not normalized:
-        return "default", {}
+        return normalized
+    if normalized in FOOD_CANONICAL_ALIASES:
+        return FOOD_CANONICAL_ALIASES[normalized]
 
-    for canonical_name, item in foods.items():
-        aliases = [canonical_name, *item.get("aliases", [])]
-        for alias in aliases:
-            alias_normalized = normalize_token(alias)
-            if alias_normalized and (normalized == alias_normalized or normalized in alias_normalized or alias_normalized in normalized):
-                return item.get("food_class", "default"), item
+    usda_match = find_usda_label(normalized)
+    if usda_match:
+        return usda_match
 
-    return "default", {}
+    return singularize_food_token(normalized)
+
+
+USDA_QUERY_ALIASES = {
+    "carrot": "carrots",
+    "carrots": "carrots",
+    "rice": "cooked rice",
+    "white rice": "cooked white rice",
+    "brown rice": "cooked brown rice",
+    "noodle": "cooked noodles",
+    "noodles": "cooked noodles",
+    "potato": "potato",
+    "potatoes": "potato",
+    "egg": "boiled egg",
+    "eggs": "boiled egg",
+}
+
+
+def usda_food_labels() -> list[str]:
+    return load_local_usda()["food_name"].dropna().astype(str).str.lower().str.strip().unique().tolist()
+
+
+def find_usda_label(text: str) -> str | None:
+    normalized = singularize_food_token(text)
+    alias = USDA_QUERY_ALIASES.get(normalized)
+    if alias:
+        return alias
+
+    labels = usda_food_labels()
+    if normalized in labels:
+        return normalized
+
+    plural = normalized + "s"
+    if plural in labels:
+        return plural
+
+    for label in sorted(labels, key=len, reverse=True):
+        label_normalized = normalize_token(label)
+        if normalized == singularize_food_token(label_normalized):
+            return label
+
+    return None
+
+
+COMMON_ALLERGEN_TOKENS = {
+    "egg",
+    "milk",
+    "peanut",
+    "nut",
+    "almond",
+    "cashew",
+    "walnut",
+    "shrimp",
+    "prawn",
+    "crab",
+    "lobster",
+    "fish",
+    "soy",
+    "tofu",
+    "wheat",
+    "sesame",
+}
+
+
+def classify_food(name: str) -> str:
+    normalized = normalize_token(canonical_food_name(name))
+    if any(token in normalized for token in ["coffee", "tea", "juice", "milk", "soda", "water", "drink"]):
+        return "beverage"
+    if any(token in normalized for token in ["cake", "cookie", "ice cream", "candy", "pie", "pudding", "dessert"]):
+        return "dessert"
+    if any(token in normalized for token in ["sauce", "dressing", "condiment", "gravy"]):
+        return "sauce_condiment"
+    if any(token in normalized for token in ["rice", "noodle", "pasta", "bread", "potato", "oat", "cereal"]):
+        return "grain_staple"
+    if any(token in normalized for token in ["shrimp", "prawn", "fish", "crab", "salmon", "tuna", "tilapia", "seafood"]):
+        return "seafood"
+    if any(token in normalized for token in ["egg", "chicken", "beef", "pork", "lamb", "turkey", "tofu", "bean"]):
+        return "protein"
+    if any(token in normalized for token in ["apple", "banana", "orange", "berry", "fruit", "melon", "grape"]):
+        return "fruit"
+    if any(token in normalized for token in ["pepper", "onion", "carrot", "broccoli", "lettuce", "tomato", "vegetable"]):
+        return "vegetable"
+    return "default"
+
+
+def is_common_allergen(name: str) -> bool:
+    tokens = set(normalize_token(name).split())
+    return bool(tokens & COMMON_ALLERGEN_TOKENS)
 
 
 def estimate_ingredient_entry(name: str) -> dict:
-    food_class, entity = classify_food(name)
+    canonical_name = canonical_food_name(name)
+    food_class = classify_food(canonical_name)
     defaults = FOOD_CLASS_DEFAULTS.get(food_class, FOOD_CLASS_DEFAULTS["default"])
     return {
-        "name": name.strip().lower(),
+        "name": canonical_name,
         "estimated_grams": defaults["estimated_grams"],
         "estimated_sodium_mg": defaults["estimated_sodium_mg"],
         "estimated_calories": defaults["estimated_calories"],
@@ -156,7 +293,7 @@ def estimate_ingredient_entry(name: str) -> dict:
         "estimated_sugar_g": defaults["estimated_sugar_g"],
         "estimated_fat_g": defaults["estimated_fat_g"],
         "food_class": food_class,
-        "possible_allergen": bool(entity.get("is_allergen", False)),
+        "possible_allergen": is_common_allergen(canonical_name),
     }
 
 
@@ -168,25 +305,57 @@ def recalculate_meal_totals(meal: dict) -> dict:
     total_carbs = sum(float(item.get("estimated_carbs_g", 0)) for item in ingredients)
     total_sugar = sum(float(item.get("estimated_sugar_g", 0)) for item in ingredients)
     total_fat = sum(float(item.get("estimated_fat_g", 0)) for item in ingredients)
+    total_protein = sum(float(item.get("estimated_protein_g", 0)) for item in ingredients)
+    total_fiber = sum(float(item.get("estimated_fiber_g", 0)) for item in ingredients)
 
-    if ingredients:
-        meal["dish_estimated_grams"] = round(total_grams)
-        meal["dish_estimated_sodium_mg"] = round(total_sodium)
-        meal["dish_estimated_calories"] = round(total_calories)
-        meal["dish_estimated_carbs_g"] = round(total_carbs)
-        meal["dish_estimated_sugar_g"] = round(total_sugar)
-        meal["dish_estimated_fat_g"] = round(total_fat)
+    meal["dish_estimated_grams"] = round(total_grams)
+    meal["dish_estimated_sodium_mg"] = round(total_sodium)
+    meal["dish_estimated_calories"] = round(total_calories)
+    meal["dish_estimated_carbs_g"] = round(total_carbs)
+    meal["dish_estimated_sugar_g"] = round(total_sugar)
+    meal["dish_estimated_fat_g"] = round(total_fat)
+    meal["dish_estimated_protein_g"] = round(total_protein)
+    meal["dish_estimated_fiber_g"] = round(total_fiber)
+
+    return meal
+
+def fix_ingredient_grams(meal):
+    ingredients = meal.get("ingredients", [])
+    total = float(meal.get("dish_estimated_grams", 0) or 0)
+
+    if not ingredients or total <= 0:
+        return meal
+
+    sum_ing = sum(float(i.get("estimated_grams", 0) or 0) for i in ingredients)
+    if sum_ing <= 0:
+        return meal
+
+    scale = total / sum_ing
+    for i in ingredients:
+        i["estimated_grams"] = round(float(i.get("estimated_grams", 0)) * scale)
 
     return meal
 
 
 def normalize_meal_structure(meal: dict) -> dict:
     normalized_ingredients = []
+    unmatched_ingredients = []
     for item in meal.get("ingredients", []):
-        entry = estimate_ingredient_entry(item.get("name", "ingredient"))
+        raw_name = str(item.get("name", "ingredient"))
+        usda_label = find_usda_label(raw_name)
+        if not usda_label:
+            unmatched_ingredients.append({
+                "name": raw_name,
+                "estimated_grams": item.get("estimated_grams"),
+                "reason": "not_found_in_local_usda_csv",
+            })
+            continue
+
+        entry = estimate_ingredient_entry(usda_label)
         entry["estimated_grams"] = round(float(item.get("estimated_grams", entry["estimated_grams"])))
         entry["estimated_sodium_mg"] = round(float(item.get("estimated_sodium_mg", entry["estimated_sodium_mg"])))
         entry["estimated_calories"] = round(float(item.get("estimated_calories", entry["estimated_calories"])))
+        entry["estimated_protein_g"] = round(float(item.get("estimated_protein_g", entry.get("estimated_protein_g", 0))))
         entry["estimated_carbs_g"] = round(float(item.get("estimated_carbs_g", entry["estimated_carbs_g"])))
         entry["estimated_sugar_g"] = round(float(item.get("estimated_sugar_g", entry["estimated_sugar_g"])))
         entry["estimated_fat_g"] = round(float(item.get("estimated_fat_g", entry["estimated_fat_g"])))
@@ -194,6 +363,11 @@ def normalize_meal_structure(meal: dict) -> dict:
         normalized_ingredients.append(entry)
 
     meal["ingredients"] = normalized_ingredients
+    if unmatched_ingredients:
+        meal["unmatched_ingredients"] = unmatched_ingredients
+        meal["dish_name"] = infer_dish_name_from_ingredients(meal) if normalized_ingredients else "unmatched meal"
+    else:
+        meal.pop("unmatched_ingredients", None)
     return recalculate_meal_totals(meal)
 
 
@@ -201,68 +375,44 @@ def get_gemini_api_key() -> str:
     state_key = st.session_state.get("gemini_api_key", "").strip()
     return state_key or os.getenv("GEMINI_API_KEY", "").strip()
 
-
-def get_usda_api_key() -> str:
-    state_key = st.session_state.get("usda_api_key", "").strip()
-    return state_key or os.getenv("USDA_API_KEY", "").strip()
+@lru_cache(maxsize=1)
+def load_local_usda():
+    path = BASE_DIR / "usda_LLMprompt.csv"  
+    df = pd.read_csv(path)
+    df.columns = df.columns.str.lower().str.strip()
+    df["food_name"] = df["food_name"].str.lower().str.strip()
+    return df
 
 
 @lru_cache(maxsize=256)
-def search_usda_nutrients(food_name: str, api_key: str) -> dict | None:
-    if not api_key or not food_name.strip():
+def search_usda_nutrients(food_name: str) -> dict | None:
+    df = load_local_usda()
+
+    food_name = canonical_food_name(food_name)
+    match = df[df["food_name"] == food_name]
+    if match.empty:
+        food_name_pattern = re.escape(food_name)
+        match = df[df["food_name"].str.contains(food_name_pattern, na=False)]
+
+    if match.empty:
         return None
 
-    try:
-        response = requests.get(
-            USDA_SEARCH_URL,
-            params={"query": food_name, "api_key": api_key, "pageSize": 1},
-            timeout=15,
-        )
-        response.raise_for_status()
-        data = response.json()
-    except Exception:
-        return None
+    row = match.iloc[0]
 
-    foods = data.get("foods", [])
-    if not foods:
-        return None
-
-    nutrients = foods[0].get("foodNutrients", [])
-    values = {
-        "calories_per_100g": None,
-        "carbs_per_100g": None,
-        "sugar_per_100g": None,
-        "fat_per_100g": None,
-        "sodium_mg_per_100g": None,
+    return {
+        "calories_per_100g": row.get("energy (kcal)"),
+        "carbs_per_100g": row.get("carbohydrate, by difference (g)"),
+        "sugar_per_100g": row.get("total sugars (g)"),
+        "fat_per_100g": row.get("total lipid (fat) (g)"),
+        "sodium_mg_per_100g": row.get("sodium, na (mg)"),
+        "protein_per_100g": row.get("protein (g)"),
     }
-
-    for nutrient in nutrients:
-        name = nutrient.get("nutrientName", "")
-        value = nutrient.get("value")
-        unit = nutrient.get("unitName", "")
-        if value is None:
-            continue
-
-        if name == "Energy" and unit.lower() == "kcal":
-            values["calories_per_100g"] = float(value)
-        elif name == "Carbohydrate, by difference":
-            values["carbs_per_100g"] = float(value)
-        elif name in {"Sugars, total including NLEA", "Total Sugars"}:
-            values["sugar_per_100g"] = float(value)
-        elif name == "Total lipid (fat)":
-            values["fat_per_100g"] = float(value)
-        elif name == "Sodium, Na":
-            values["sodium_mg_per_100g"] = float(value)
-
-    if all(value is None for value in values.values()):
-        return None
-
-    return values
 
 
 def enrich_ingredient_entry_with_usda(entry: dict) -> dict:
-    nutrient_values = search_usda_nutrients(str(entry.get("name", "")), get_usda_api_key())
+    nutrient_values = search_usda_nutrients(str(entry.get("name", "")))
     if not nutrient_values:
+        entry["nutrition_source"] = "fallback_default"
         return entry
 
     grams = float(entry.get("estimated_grams", 0))
@@ -277,8 +427,70 @@ def enrich_ingredient_entry_with_usda(entry: dict) -> dict:
         entry["estimated_fat_g"] = round(grams / 100 * nutrient_values["fat_per_100g"])
     if nutrient_values.get("sodium_mg_per_100g") is not None:
         entry["estimated_sodium_mg"] = round(grams / 100 * nutrient_values["sodium_mg_per_100g"])
+    if nutrient_values.get("protein_per_100g") is not None:
+        entry["estimated_protein_g"] = round(grams / 100 * nutrient_values["protein_per_100g"])
 
+    entry["nutrition_source"] = "local_usda_csv"
     return entry
+
+
+def invalid_usda_ingredient_names(meal: dict) -> list[str]:
+    invalid = []
+    for item in meal.get("ingredients", []):
+        name = str(item.get("name", "")).strip()
+        if name and not find_usda_label(name):
+            invalid.append(name)
+    return invalid
+
+
+def remap_meal_to_usda_labels_with_gemini(meal: dict, client) -> dict:
+    invalid_names = invalid_usda_ingredient_names(meal)
+    if not invalid_names:
+        return meal
+
+    labels = usda_food_labels()
+    label_str = "\n".join(f"- {label}" for label in labels)
+    remap_prompt = f"""
+You are a strict local USDA label mapper.
+
+Some ingredient names are not in the allowed local USDA table:
+{json.dumps(invalid_names, ensure_ascii=True)}
+
+Rewrite the meal JSON so EVERY ingredient name is exactly one label from ALLOWED_USDA_LABELS.
+Keep each ingredient's estimated_grams from the input unless there is an obvious JSON formatting issue.
+Do not add nutrients. Do not explain. Return JSON only.
+
+ALLOWED_USDA_LABELS:
+{label_str}
+
+INPUT_MEAL_JSON:
+{json.dumps(meal, ensure_ascii=True)}
+
+Required output format:
+{{
+  "dish_name": "dish name",
+  "ingredients": [
+    {{"name": "EXACT_LABEL_FROM_ALLOWED_USDA_LABELS", "estimated_grams": 100}}
+  ]
+}}
+"""
+    response = client.models.generate_content(
+        model="gemini-3.1-flash-lite-preview",
+        contents=[remap_prompt],
+    )
+    text = response.text or ""
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if not match:
+        return meal
+
+    try:
+        remapped = json.loads(match.group())
+    except json.JSONDecodeError:
+        return meal
+
+    if not isinstance(remapped, dict) or not isinstance(remapped.get("ingredients"), list):
+        return meal
+    return remapped
 
 
 def detect_food_from_image(image: Image.Image, api_key: str) -> dict:
@@ -288,15 +500,34 @@ def detect_food_from_image(image: Image.Image, api_key: str) -> dict:
         raise RuntimeError("Missing Gemini API key. Set GEMINI_API_KEY to enable uploaded meal analysis.")
 
     client = genai.Client(api_key=api_key)
+
+    df_usda = load_local_usda()
+    all_labels = df_usda['food_name'].unique().tolist()
+    
+    label_str = "\n".join([f"- {l}" for l in all_labels])
+
+    DETECTION_PROMPT = f"""
+    You are a nutrition database matcher. Analyze the image and map ingredients ONLY to the provided list.
+    
+    ALLOWED INGREDIENTS LIST:
+    {label_str}
+    
+    STRICT RULES:
+    1. If an item is a beverage (like coffee), you MUST pick a name starting with "Coffee" from the list.
+    2. NEVER use the label "sauce" for a drink.
+    3. If no exact match exists, pick the MOST semantically similar label from the list.
+    4. Return JSON only: {{"dish_name": "...", "ingredients": [{{"name": "EXACT_LABEL_FROM_LIST", "estimated_grams": 100}}]}}
+    """
+
     response = client.models.generate_content(
         model="gemini-3.1-flash-lite-preview",
-        contents=[MEAL_DETECTION_PROMPT, image],
+        contents=[DETECTION_PROMPT, image],
     )
-    text = response.text or ""
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if not match:
-        raise ValueError("JSON not found in model response.")
-    result = json.loads(match.group())
+
+    result = json.loads(re.search(r"\{.*\}", response.text, re.DOTALL).group())
+
+    result = fix_ingredient_grams(result)
+    result = remap_meal_to_usda_labels_with_gemini(result, client)
     return normalize_meal_structure(result)
 
 
@@ -319,6 +550,7 @@ def refresh_corrected_meal_with_api(meal: dict, api_key: str) -> dict:
     if not match:
         raise ValueError("JSON not found in model response.")
     result = json.loads(match.group())
+    result = remap_meal_to_usda_labels_with_gemini(result, client)
     return normalize_meal_structure(result)
 
 
@@ -361,16 +593,9 @@ def init_state() -> None:
     if "confirmed_meals" not in st.session_state:
         st.session_state.confirmed_meals = []
     if "chat_history" not in st.session_state:
-        st.session_state.chat_history = [
-            {
-                "role": "assistant",
-                "content": (
-                    "We can chat normally about your meals and nutrition. "
-                    "I can also recognise conditions you mention and save them to your profile. "
-                    "Try asking: 'what do you know about me', 'what can I eat with hypertension', or 'change my goal to gain muscle'."
-                ),
-            }
-        ]
+        st.session_state.chat_history = []
+    if "capability_tip" not in st.session_state:
+        st.session_state.capability_tip = None
 
 
 def calculate_targets(profile: dict) -> tuple[int, float]:
@@ -406,6 +631,65 @@ def update_targets() -> None:
     calories, protein = calculate_targets(st.session_state.profile)
     st.session_state.profile["daily_calories"] = calories
     st.session_state.profile["daily_protein"] = protein
+
+
+def render_capability_guide() -> None:
+    capabilities = {
+        "My profile": {
+            "summary": "I can remember changes to your body details, goals, and health conditions.",
+            "examples": [
+                "My weight is 70 kg.",
+                "Change my goal to lose weight.",
+                "I want to gain muscle.",
+                "I have hypertension.",
+                "I have diabetes.",
+            ],
+        },
+        "Food limits": {
+            "summary": "I can keep track of foods you avoid, including allergies, and remove them later.",
+            "examples": [
+                "I am allergic to shrimp.",
+                "I cannot eat tomatoes.",
+                "I should avoid peanuts.",
+                "I am not allergic to tomatoes.",
+                "I can eat shrimp now.",
+            ],
+        },
+        "Meal questions": {
+            "summary": "I can explain the meal estimate and whether it fits your profile.",
+            "examples": [
+                "Analyze this meal.",
+                "Is this meal healthy for me?",
+                "Can I eat this with diabetes?",
+                "What are the ingredients?",
+                "How many calories are in this meal?",
+            ],
+        },
+        "Fix ingredients": {
+            "summary": "I can update the ingredient list when recognition gets something wrong.",
+            "examples": [
+                "Remove rice.",
+                "Add broccoli.",
+                "Replace prawn with tofu.",
+                "This is not beef, it is chicken.",
+            ],
+        },
+    }
+
+    st.caption("Tell me about a meal, your goals, or foods you avoid. Tap a topic for example wording.")
+    cols = st.columns(len(capabilities))
+    for idx, label in enumerate(capabilities):
+        if cols[idx].button(label, key=f"capability_tip_{label}", use_container_width=True):
+            st.session_state.capability_tip = None if st.session_state.capability_tip == label else label
+
+    active_tip = st.session_state.capability_tip
+    if active_tip:
+        capability = capabilities[active_tip]
+        examples = "  \n".join(f"`{example}`" for example in capability["examples"][:3])
+        st.markdown(
+            f"{capability['summary']}  \n"
+            f"Try: {examples}"
+        )
 
 
 def meal_tracking_key(meal: dict | None) -> str | None:
@@ -542,28 +826,314 @@ def sample_meals() -> dict:
 def parse_list_field(text: str) -> list[str]:
     if not text.strip():
         return []
-    return [item.strip().lower() for item in text.split(",") if item.strip()]
+    return unique_profile_items(item.strip().lower() for item in text.split(",") if item.strip())
+
+
+PROFILE_ITEM_ALIASES = {
+    "prawn": "shrimp",
+    "prawns": "shrimp",
+    "peanuts": "peanut",
+    "eggs": "egg",
+    "tree nuts": "nuts",
+    "tomatoes": "tomato",
+    "tomatos": "tomato",
+    "tomotaes": "tomato",
+    "cherry tomatoes": "tomato",
+    "lychees": "lychee",
+    "lyche": "lychee",
+    "cherry tomato": "tomato",
+    "low salt": "low_sodium",
+    "low sodium": "low_sodium",
+    "high protein": "high_protein",
+    "low sugar": "low_sugar",
+}
+
+
+def normalize_profile_item(value: str) -> str:
+    normalized = normalize_token(str(value))
+    if normalized in PROFILE_ITEM_ALIASES:
+        return PROFILE_ITEM_ALIASES[normalized]
+    if normalized in {"low sodium", "high protein", "low sugar"}:
+        return normalized.replace(" ", "_")
+    return singularize_food_token(normalized)
+
+
+def unique_profile_items(items) -> list[str]:
+    unique = []
+    for item in items:
+        normalized = normalize_profile_item(str(item))
+        if normalized and normalized not in unique:
+            unique.append(normalized)
+    return unique
 
 
 def add_unique_profile_item(profile: dict, key: str, value: str, label: str, updates: list[str]) -> None:
+    value = normalize_profile_item(value)
     if value not in profile[key]:
         profile[key].append(value)
         updates.append(f"{label} added: {value}")
 
 
+def remove_profile_item(profile: dict, key: str, value: str, label: str, updates: list[str]) -> None:
+    value = normalize_profile_item(value)
+    original = profile.get(key, [])
+    filtered = [item for item in original if normalize_profile_item(item) != value]
+    if len(filtered) != len(original):
+        profile[key] = filtered
+        updates.append(f"{label} removed: {value}")
+
+
+def sync_profile_restrictions(profile: dict) -> None:
+    allergies = unique_profile_items(profile.get("allergies", []))
+    diet_preferences = unique_profile_items(profile.get("diet_preferences", []))
+    dietary_restrictions = unique_profile_items([
+        *allergies,
+        *diet_preferences,
+        *profile.get("dietary_restrictions", []),
+    ])
+
+    profile["allergies"] = allergies
+    profile["diet_preferences"] = diet_preferences
+    profile["dietary_restrictions"] = dietary_restrictions
+
+
+def add_profile_allergy(profile: dict, value: str, updates: list[str]) -> None:
+    add_unique_profile_item(profile, "allergies", value, "allergy", updates)
+    sync_profile_restrictions(profile)
+
+
+def remove_profile_allergy(profile: dict, value: str, updates: list[str]) -> None:
+    value = normalize_profile_item(value)
+    before = set(unique_profile_items(profile.get("allergies", [])))
+    profile["allergies"] = [
+        item
+        for item in unique_profile_items(profile.get("allergies", []))
+        if normalize_profile_item(item) != value
+    ]
+    profile["dietary_restrictions"] = [
+        item
+        for item in unique_profile_items(profile.get("dietary_restrictions", []))
+        if normalize_profile_item(item) != value
+    ]
+    if value in before:
+        updates.append(f"allergy removed: {value}")
+    sync_profile_restrictions(profile)
+
+
+def add_profile_diet_preference(profile: dict, value: str, updates: list[str]) -> None:
+    add_unique_profile_item(profile, "diet_preferences", value, "diet preference", updates)
+    sync_profile_restrictions(profile)
+
+
 def get_restrictions(profile: dict) -> set[str]:
-    return set(profile.get("dietary_restrictions", []))
+    sync_profile_restrictions(profile)
+    normalized = profile["dietary_restrictions"]
+    return set(normalized)
+
+
+def food_restrictions(profile: dict) -> set[str]:
+    preference_labels = {"vegetarian", "vegan", "low_sodium", "low_sugar", "high_protein"}
+    if "allergies" in profile:
+        return set(unique_profile_items(profile.get("allergies", [])))
+    return {item for item in get_restrictions(profile) if item not in preference_labels}
+
+
+FOOD_MATCH_STOPWORDS = {
+    "cooked",
+    "raw",
+    "fresh",
+    "dried",
+    "dry",
+    "whole",
+    "reduced",
+    "low",
+    "boiled",
+    "fried",
+    "roasted",
+    "grilled",
+    "baked",
+    "with",
+    "and",
+    "in",
+    "as",
+    "ingredient",
+    "nfs",
+}
+
+
+def meaningful_food_tokens(name: str) -> set[str]:
+    return {
+        singularize_food_token(token)
+        for token in canonical_food_name(name).split()
+        if len(token) > 1 and token not in FOOD_MATCH_STOPWORDS
+    }
+
+
+def restriction_matches_ingredient(restriction: str, ingredient: str) -> bool:
+    restriction_name = canonical_food_name(restriction)
+    ingredient_name = canonical_food_name(ingredient)
+    if not restriction_name or not ingredient_name:
+        return False
+    if restriction_name == ingredient_name:
+        return True
+
+    restriction_tokens = set(restriction_name.split())
+    ingredient_tokens = set(ingredient_name.split())
+    if restriction_tokens and ingredient_tokens and restriction_tokens <= ingredient_tokens:
+        return True
+
+    restriction_core = meaningful_food_tokens(restriction_name)
+    ingredient_core = meaningful_food_tokens(ingredient_name)
+    return bool(restriction_core and ingredient_core and restriction_core <= ingredient_core)
+
+
+def restricted_items_in_meal(profile: dict, meal: dict | None) -> list[str]:
+    if not meal:
+        return []
+    restricted = food_restrictions(profile)
+    matches = []
+    for item in meal.get("ingredients", []):
+        ingredient = canonical_food_name(str(item.get("name", "")))
+        for restriction in restricted:
+            if restriction_matches_ingredient(restriction, ingredient) and ingredient not in matches:
+                matches.append(ingredient)
+    return matches
+
+
+def allergy_exclusion_note(meal: dict) -> str:
+    excluded = meal.get("excluded_allergy_ingredients") or []
+    if not excluded:
+        return ""
+
+    names = ", ".join(excluded)
+    return (
+        f"Allergy note: your profile says you are allergic to {names}. "
+        f"I detected {names} in the image, so I did not include it in the nutrition calculation."
+    )
+
+
+def apply_allergy_exclusions(profile: dict, meal: dict | None) -> tuple[dict | None, list[str]]:
+    if not meal:
+        return meal, []
+
+    restricted = food_restrictions(profile)
+    if not restricted:
+        return meal, []
+
+    kept_ingredients = []
+    excluded = list(meal.get("excluded_allergy_ingredients") or [])
+
+    for item in meal.get("ingredients", []):
+        ingredient_name = str(item.get("name", ""))
+        matched_restriction = next(
+            (
+                restriction
+                for restriction in restricted
+                if restriction_matches_ingredient(restriction, ingredient_name)
+            ),
+            None,
+        )
+
+        if matched_restriction:
+            excluded_name = canonical_food_name(ingredient_name) or canonical_food_name(matched_restriction)
+            if excluded_name and excluded_name not in excluded:
+                excluded.append(excluded_name)
+        else:
+            kept_ingredients.append(item)
+
+    if len(kept_ingredients) == len(meal.get("ingredients", [])):
+        return meal, []
+
+    meal["ingredients"] = kept_ingredients
+    meal["excluded_allergy_ingredients"] = excluded
+    meal["allergy_exclusion_note"] = allergy_exclusion_note(meal)
+    meal["dish_name"] = infer_dish_name_from_ingredients(meal)
+    return recalculate_meal_totals(meal), excluded
+
+
+def extract_profile_food_mentions(text: str, fallback_map: dict[str, str]) -> list[str]:
+    foods = []
+    foods.extend(extract_food_mentions(text))
+    lowered = text.lower()
+    for phrase, value in fallback_map.items():
+        if phrase in lowered:
+            foods.append(value)
+    return unique_profile_items(foods)
+
+
+def extract_cannot_eat_food_mentions(text: str) -> list[str]:
+    lowered = text.lower()
+    matches = re.findall(
+        r"\b(?:i\s+)?(?:cannot|can't|can\s+not|could\s+not|should\s+not|must\s+not)\s+eat\s+([^,.!?;]+)",
+        lowered,
+    )
+    foods = []
+    for match in matches:
+        cleaned = re.sub(r"\b(any|the|a|an|food|foods|ingredient|ingredients)\b", " ", match)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        if cleaned:
+            foods.append(canonical_food_name(cleaned) or cleaned)
+    return unique_profile_items(foods)
+
+
+def extract_can_eat_food_mentions(text: str) -> list[str]:
+    lowered = text.lower()
+    matches = re.findall(
+        r"\b(?:i\s+)?(?:can|could)\s+(?:now\s+|actually\s+)?eat\s+([^,.!?;]+)",
+        lowered,
+    )
+    foods = []
+    for match in matches:
+        cleaned = re.sub(r"\b(any|the|a|an|food|foods|ingredient|ingredients|now|again)\b", " ", match)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        if cleaned:
+            foods.append(normalize_profile_item(cleaned) or cleaned)
+    return unique_profile_items(foods)
+
+
+def is_restriction_removal_intent(text: str) -> bool:
+    lowered = text.lower()
+    patterns = [
+        r"\bnot allergic to\b",
+        r"\bnot allergy to\b",
+        r"\bno longer allergic to\b",
+        r"\bno allergy to\b",
+        r"\bremove\b.+\b(allergy|allergies|restriction|restrictions)\b",
+        r"\bdelete\b.+\b(allergy|allergies|restriction|restrictions)\b",
+        r"\bclear\b.+\b(allergy|allergies|restriction|restrictions)\b",
+        r"\bi can eat\b",
+        r"\bi can now eat\b",
+        r"\bi actually eat\b",
+        r"\bi eat\b",
+        r"\bi'm ok with\b",
+        r"\bi am ok with\b",
+        r"不过敏",
+        r"可以吃",
+        r"能吃",
+        r"删除.*过敏",
+        r"移除.*过敏",
+    ]
+    return any(re.search(pattern, lowered) for pattern in patterns)
 
 
 def detect_profile_updates(text: str, profile: dict) -> list[str]:
     lowered = text.lower()
     updates = []
+    sync_profile_restrictions(profile)
+    profile["dietary_restrictions"] = unique_profile_items(profile.get("dietary_restrictions", []))
     allergies_map = {
         "shrimp": "shrimp",
         "prawn": "shrimp",
+        "prawns": "shrimp",
         "peanut": "peanut",
+        "peanuts": "peanut",
         "nuts": "nuts",
         "egg": "egg",
+        "eggs": "egg",
+        "tomato": "tomato",
+        "tomatoes": "tomato",
+        "tomatos": "tomato",
+        "tomotaes": "tomato",
         "zucchini": "zucchini",
         "courgette": "zucchini",
         "虾": "shrimp",
@@ -588,20 +1158,46 @@ def detect_profile_updates(text: str, profile: dict) -> list[str]:
             profile["conditions"].append(condition)
             updates.append(f"condition added: {condition}")
 
-    allergy_result = process_user_input(text, load_intent_food_library())
-    if allergy_result.get("intent") == "allergy":
-        for allergy in allergy_result.get("allergies", []):
-            add_unique_profile_item(profile, "dietary_restrictions", allergy, "restriction", updates)
+    allergy_trigger = any(
+        token in lowered
+        for token in [
+            "allergic",
+            "allergy",
+            "cannot eat",
+            "can't eat",
+            "can not eat",
+            "should avoid",
+            "must avoid",
+            "过敏",
+            "不能吃",
+            "不可以吃",
+        ]
+    )
+    food_library = load_food_library(FOOD_LIBRARY_PATH)
+    allergy_items = extract_allergy_entities(text, food_library)
+    cannot_eat_items = extract_cannot_eat_food_mentions(text) if allergy_trigger else []
+    if cannot_eat_items:
+        allergy_items = cannot_eat_items
+    elif allergy_trigger and not allergy_items:
+        allergy_items = extract_food_mentions(text)
+    removal_items = extract_food_entities(text, food_library)
+    can_eat_items = extract_can_eat_food_mentions(text) if is_restriction_removal_intent(text) else []
+    if can_eat_items:
+        removal_items = can_eat_items
+    elif is_restriction_removal_intent(text) and not removal_items:
+        removal_items = extract_food_mentions(text)
+
+    if is_restriction_removal_intent(text):
+        for item in removal_items:
+            remove_profile_allergy(profile, item, updates)
     else:
-        allergy_trigger = any(token in lowered for token in ["allergic", "allergy", "过敏", "不能吃", "不可以吃"])
         if allergy_trigger:
-            for phrase, value in allergies_map.items():
-                if phrase in lowered:
-                    add_unique_profile_item(profile, "dietary_restrictions", value, "restriction", updates)
+            for item in allergy_items:
+                add_profile_allergy(profile, item, updates)
 
     for phrase, value in preferences_map.items():
         if phrase in lowered:
-            add_unique_profile_item(profile, "dietary_restrictions", value, "restriction", updates)
+            add_profile_diet_preference(profile, value, updates)
 
     goal_result = parse_sequential_goal_update(text)
     if goal_result["is_update"] and goal_result["final_goal"]:
@@ -609,22 +1205,17 @@ def detect_profile_updates(text: str, profile: dict) -> list[str]:
             profile["goal"] = goal_result["final_goal"]
             updates.append(f"goal updated: {goal_result['final_goal']}")
 
-    age_match = re.search(r"\b(?:i am|i'm|age is|age)\s+(\d{1,3})\b", lowered)
-    if age_match:
-        profile["age"] = int(age_match.group(1))
-        updates.append(f"age updated: {profile['age']}")
-
-    height_match = re.search(r"\b(?:height is|height|i am)\s+(\d{2,3}(?:\.\d+)?)\s*cm\b", lowered)
-    if height_match:
-        profile["height_cm"] = float(height_match.group(1))
-        updates.append(f"height updated: {profile['height_cm']} cm")
-
     weight_result = parse_sequential_weight_update(text)
     if weight_result["is_update"] and weight_result["extracted_weight_kg"] is not None:
         extracted_weight = float(weight_result["extracted_weight_kg"])
         if float(profile["weight_kg"]) != extracted_weight:
             profile["weight_kg"] = extracted_weight
             updates.append(f"weight updated: {profile['weight_kg']} kg")
+
+    height_match = re.search(r"\b(?:height is|my height is|height|i am|i'm)\s+(\d{2,3}(?:\.\d+)?)\s*cm\b", lowered)
+    if height_match and not weight_result["is_update"]:
+        profile["height_cm"] = float(height_match.group(1))
+        updates.append(f"height updated: {profile['height_cm']} cm")
 
     if any(token in lowered for token in [" male", "man", "boy"]):
         if profile["gender"] != "male":
@@ -714,13 +1305,19 @@ def generate_advice(profile: dict, meal: dict, kb: list[dict]) -> str:
     main_source = biggest_sodium_source(meal)
 
     advice = [f"This looks like {dish}, estimated at about {calories} kcal and {sodium} mg sodium."]
+    exclusion_note = allergy_exclusion_note(meal)
+    if exclusion_note:
+        advice.append(exclusion_note)
 
     restrictions = get_restrictions(profile)
+    risky_restricted_items = restricted_items_in_meal(profile, meal)
 
-    if "shrimp" in restrictions:
-        contains_shrimp = any(i["name"] in {"shrimp", "prawn"} for i in meal.get("ingredients", []))
-        if contains_shrimp:
-            advice.append("Your profile says shrimp is in your dietary restrictions, so this meal may not be safe for you.")
+    if risky_restricted_items:
+        advice.append(
+            "Your profile says you restrict "
+            + ", ".join(risky_restricted_items)
+            + ", and this meal may contain it."
+        )
 
     if risk_notes:
         advice.extend(risk_notes)
@@ -785,21 +1382,19 @@ def split_correction_sentences(text: str) -> list[str]:
 
 
 def extract_food_mentions(text: str) -> list[str]:
-    foods = load_food_entities()
     normalized_text = normalize_token(text)
     normalized_text = normalized_text.replace("soap", "soup")
     matched = []
 
-    for canonical_name, item in foods.items():
-        aliases = [canonical_name, *item.get("aliases", [])]
-        for alias in aliases:
-            alias_normalized = normalize_token(alias)
-            if not alias_normalized:
-                continue
-            if re.search(r"\b" + re.escape(alias_normalized) + r"\b", normalized_text):
-                if canonical_name not in matched:
-                    matched.append(canonical_name)
-                break
+    for label in sorted(usda_food_labels(), key=len, reverse=True):
+        label_normalized = normalize_token(label)
+        if not label_normalized:
+            continue
+        label_variants = {label_normalized, singularize_food_token(label_normalized)}
+        if any(re.search(r"\b" + re.escape(variant) + r"\b", normalized_text) for variant in label_variants):
+            usda_label = find_usda_label(label) or label
+            if usda_label not in matched:
+                matched.append(usda_label)
 
     fallback_map = {
         "beef": "beef",
@@ -824,6 +1419,7 @@ def extract_food_mentions(text: str) -> list[str]:
         "soap": "broth",
     }
     for token, canonical in sorted(fallback_map.items(), key=lambda item: len(item[0]), reverse=True):
+        canonical = find_usda_label(canonical) or canonical_food_name(canonical)
         if re.search(r"\b" + re.escape(token) + r"\b", normalized_text) and canonical not in matched:
             matched.append(canonical)
 
@@ -831,14 +1427,14 @@ def extract_food_mentions(text: str) -> list[str]:
 
 
 def find_matching_ingredient_name(meal: dict, food_name: str) -> str | None:
-    normalized_target = normalize_token(food_name)
+    normalized_target = canonical_food_name(food_name)
     synonym_pairs = {
         "soup": "broth",
         "broth": "soup",
         "soap": "soup",
     }
     for item in meal.get("ingredients", []):
-        current = normalize_token(str(item.get("name", "")))
+        current = canonical_food_name(str(item.get("name", "")))
         if not current:
             continue
         if current == normalized_target or normalized_target in current or current in normalized_target:
@@ -889,6 +1485,7 @@ def infer_correction_command(text: str, meal: dict) -> dict | None:
         r"\breplace (?P<old>.+?) with (?P<new>.+)\b",
         r"\bswap (?P<old>.+?) with (?P<new>.+)\b",
         r"\bchange (?P<old>.+?) to (?P<new>.+)\b",
+        r"\b(?P<old>.+?)\s+is\s+(?P<new>.+)\b",
         r"\bthe (?:meat|protein|ingredient|food)\s+is (?P<new>.+)\b",
         r"\bit\s+is (?P<new>.+)\b",
     ]
@@ -904,6 +1501,10 @@ def infer_correction_command(text: str, meal: dict) -> dict | None:
         old_foods = extract_food_mentions(old_group) if old_group else []
         if old_foods:
             return {"action": "replace", "from": old_foods[0], "to": new_foods[0]}
+        if old_group:
+            matched_old_name = find_matching_ingredient_name(meal, old_group)
+            if matched_old_name:
+                return {"action": "replace", "from": matched_old_name, "to": new_foods[0]}
 
         contextual_old = [food for food in foods if food != new_foods[0]]
         if contextual_old:
@@ -1077,12 +1678,14 @@ def apply_meal_correction(text: str, meal: dict, api_key: str | None = None) -> 
 
 
 def format_profile_summary(profile: dict) -> str:
+    sync_profile_restrictions(profile)
     return (
         f"Age {profile['age']}, gender {profile['gender']}, height {profile['height_cm']} cm, "
         f"weight {profile['weight_kg']} kg, goal {profile['goal']}, daily target about "
         f"{profile['daily_calories']} kcal and {profile['daily_protein']} g protein. "
         f"Conditions: {', '.join(profile['conditions']) if profile['conditions'] else 'none'}. "
-        f"Dietary restrictions: {', '.join(profile['dietary_restrictions']) if profile['dietary_restrictions'] else 'none'}."
+        f"Allergies: {', '.join(profile['allergies']) if profile['allergies'] else 'none'}. "
+        f"Diet preferences: {', '.join(profile['diet_preferences']) if profile['diet_preferences'] else 'none'}."
     )
 
 
@@ -1114,8 +1717,10 @@ def format_ingredient_calorie_breakdown(meal: dict, limit: int = 6) -> str:
 
 def build_chat_image_analysis_reply(meal: dict, profile: dict, kb: list[dict]) -> str:
     insight = build_meal_insight(profile, meal, kb)
+    exclusion_note = allergy_exclusion_note(meal)
+    exclusion_prefix = f"{exclusion_note} " if exclusion_note else ""
     return (
-        f"I analyzed your uploaded meal image. {insight['headline']} "
+        f"I analyzed your uploaded meal image. {exclusion_prefix}{insight['headline']} "
         f"{format_ingredient_calorie_breakdown(meal)} "
         f"Main note: {insight['main_risk']} "
         f"Suggested next step: {insight['actions'][0]} "
@@ -1125,8 +1730,10 @@ def build_chat_image_analysis_reply(meal: dict, profile: dict, kb: list[dict]) -
 
 def build_meal_correction_reply(action_message: str, meal: dict, profile: dict, kb: list[dict]) -> str:
     insight = build_meal_insight(profile, meal, kb)
+    exclusion_note = allergy_exclusion_note(meal)
+    exclusion_text = f"{exclusion_note} " if exclusion_note else ""
     return (
-        f"{action_message} "
+        f"{action_message} {exclusion_text}"
         f"The updated dish is {meal.get('dish_name', 'meal').title()} with about "
         f"{meal.get('dish_estimated_calories', 0)} kcal, {meal.get('dish_estimated_carbs_g', 0)} g carbs, "
         f"{meal.get('dish_estimated_sugar_g', 0)} g sugar, {meal.get('dish_estimated_fat_g', 0)} g fat, "
@@ -1215,12 +1822,12 @@ def build_diet_preference_guidance(profile: dict, meal: dict | None) -> str:
     if "constipation" in conditions:
         allowed.append("fruit, vegetables, legumes, oats, and other higher-fibre foods with enough water")
         avoid.append("very low-fibre patterns and long periods without fluids")
-    allergen_restrictions = sorted(item for item in restrictions if item in {"shrimp", "peanut", "nuts", "egg"})
+    allergen_restrictions = sorted(food_restrictions(profile))
     if allergen_restrictions:
         avoid.append("foods containing " + ", ".join(allergen_restrictions))
 
     if meal:
-        risky = [item["name"] for item in meal.get("ingredients", []) if item["name"] in allergen_restrictions]
+        risky = restricted_items_in_meal(profile, meal)
         if risky:
             avoid.append("the current meal because it may contain " + ", ".join(risky))
 
@@ -1342,11 +1949,25 @@ def answer_who_question(user_text: str, kb: list[dict]) -> str | None:
 
 def suggest_next_prompts(meal: dict | None) -> str:
     prompts = [
-        "Try asking: 'what do you know about me', 'what can I eat with hypertension', or 'change my goal to gain muscle'."
+        "Try one of these: profile: 'My weight is 70 kg'; restriction: 'I am allergic to shrimp'; remove restriction: 'I am not allergic to tomatoes'; goal: 'I want to gain muscle'."
     ]
     if meal:
-        prompts.append("You can also say: 'remove soy sauce', 'replace prawn with tofu', or 'can I eat this with diabetes?'.")
+        prompts.append("Meal: 'Analyze this meal'; fix: 'Replace prawn with tofu'.")
     return " ".join(prompts)
+
+
+def unknown_intent_reply(meal: dict | None) -> str:
+    if meal:
+        meal_hint = " For the current meal, you can also say `Analyze this meal` or `Replace prawn with tofu`."
+    else:
+        meal_hint = " If you want meal advice, upload a meal image first, then say `Analyze this meal`."
+
+    return (
+        "I can help if you phrase that as one clear update or question. "
+        "For example: `My weight is 70 kg`, `I have diabetes`, "
+        "`I am allergic to shrimp`, or `I am not allergic to tomatoes`."
+        + meal_hint
+    )
 
 
 def chatbot_reply(user_text: str) -> str:
@@ -1359,8 +1980,25 @@ def chatbot_reply(user_text: str) -> str:
 
     updates = detect_profile_updates(user_text, profile)
     correction_message = None
-    if meal:
-        updated_meal, correction_message = apply_meal_correction(user_text, meal, get_gemini_api_key())
+    is_meal_correction = bool(
+        meal
+        and (
+            intent == "meal_correction"
+            or infer_correction_command(user_text, meal)
+        )
+    )
+
+    if is_meal_correction:
+        updated_meal, correction_message = apply_meal_correction(user_text, meal, None)
+        updated_meal, excluded_allergens = apply_allergy_exclusions(profile, updated_meal)
+        if excluded_allergens:
+            correction_message = correction_message or "Updated the meal based on your allergy profile."
+        st.session_state.meal = updated_meal
+        meal = updated_meal
+    elif meal:
+        updated_meal, excluded_allergens = apply_allergy_exclusions(profile, meal)
+        if excluded_allergens:
+            correction_message = "Updated the meal based on your allergy profile."
         st.session_state.meal = updated_meal
         meal = updated_meal
 
@@ -1407,8 +2045,9 @@ def chatbot_reply(user_text: str) -> str:
         return "I can explain WHO guidance on sodium, sugar, fats, vegetables, fibre, and potassium. Ask me a specific topic."
 
     if meal and intent == "allergy":
-        restricted_allergens = {item for item in get_restrictions(profile) if item in {"shrimp", "peanut", "nuts", "egg"}}
-        risky_items = [item["name"] for item in meal.get("ingredients", []) if item["name"] in restricted_allergens or item.get("possible_allergen")]
+        risky_items = restricted_items_in_meal(profile, meal)
+        if not risky_items:
+            risky_items = [item["name"] for item in meal.get("ingredients", []) if item.get("possible_allergen")]
         if risky_items:
             return f"Please be careful. This meal may contain allergen-relevant items such as {', '.join(risky_items[:4])}. Cross-check the real ingredients before eating."
         return "I do not see a direct allergy match from the current meal estimate, but image-based meal detection can miss hidden ingredients."
@@ -1429,12 +2068,9 @@ def chatbot_reply(user_text: str) -> str:
                 f"Main note: {insight['main_risk']} You can also say 'analyze this meal', "
                 f"'remove egg', or 'I have hypertension'."
             )
-        return "You can chat with me normally, tell me your condition or dietary restrictions, or ask me to analyze a meal."
+        return unknown_intent_reply(meal)
 
-    return (
-        "We can chat normally about your meals and nutrition. I can also recognise conditions you mention and save them to your profile. "
-        + suggest_next_prompts(meal)
-    )
+    return unknown_intent_reply(meal)
 
 
 def render_sidebar() -> None:
@@ -1442,7 +2078,6 @@ def render_sidebar() -> None:
     profile = st.session_state.profile
 
     st.sidebar.text_input("Gemini API Key", value=st.session_state.get("gemini_api_key", ""), key="gemini_api_key", type="password")
-    st.sidebar.text_input("USDA API Key", value=st.session_state.get("usda_api_key", ""), key="usda_api_key", type="password")
 
     profile["age"] = st.sidebar.number_input("Age", min_value=1, max_value=120, value=int(profile["age"]))
     profile["gender"] = st.sidebar.selectbox("Gender", ["female", "male"], index=0 if profile["gender"] == "female" else 1)
@@ -1556,18 +2191,7 @@ def render_insight_panel() -> None:
 
 def render_chat() -> None:
     st.subheader("Chatbot")
-    starter_prompts = [
-        "Analyze this meal",
-        "How many calories are in this meal?",
-        "What are the main ingredients?",
-        "I have diabetes",
-    ]
-    cols = st.columns(len(starter_prompts))
-    for idx, starter in enumerate(starter_prompts):
-        if cols[idx].button(starter, key=f"starter_{idx}"):
-            st.session_state.chat_history.append({"role": "user", "content": starter})
-            st.session_state.chat_history.append({"role": "assistant", "content": chatbot_reply(starter)})
-            st.rerun()
+    render_capability_guide()
 
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
@@ -1598,6 +2222,7 @@ def render_chat() -> None:
             try:
                 with st.spinner("Analyzing uploaded meal image..."):
                     result = detect_food_from_image(image, get_gemini_api_key())
+                    result, _ = apply_allergy_exclusions(st.session_state.profile, result)
                 st.session_state.meal = result
                 kb = load_who_knowledge()
                 reply = build_chat_image_analysis_reply(result, st.session_state.profile, kb)
