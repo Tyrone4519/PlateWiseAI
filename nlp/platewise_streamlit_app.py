@@ -25,6 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent
 WHO_KB_PATH = BASE_DIR / "who_knowledge.json"
 FOOD_LIBRARY_PATH = BASE_DIR / "nutrition5k_food_entity_library.json"
 # USDA_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search"
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite").strip()
 
 FOOD_CLASS_DEFAULTS = {
     "protein": {"estimated_grams": 90, "estimated_sodium_mg": 90, "estimated_calories": 180, "estimated_carbs_g": 0, "estimated_sugar_g": 0, "estimated_fat_g": 9},
@@ -475,7 +476,7 @@ Required output format:
 }}
 """
     response = client.models.generate_content(
-        model="gemini-3.1-flash-lite-preview",
+        model=GEMINI_MODEL,
         contents=[remap_prompt],
     )
     text = response.text or ""
@@ -520,7 +521,7 @@ def detect_food_from_image(image: Image.Image, api_key: str) -> dict:
     """
 
     response = client.models.generate_content(
-        model="gemini-3.1-flash-lite-preview",
+        model=GEMINI_MODEL,
         contents=[DETECTION_PROMPT, image],
     )
 
@@ -539,7 +540,7 @@ def refresh_corrected_meal_with_api(meal: dict, api_key: str) -> dict:
 
     client = genai.Client(api_key=api_key)
     response = client.models.generate_content(
-        model="gemini-3.1-flash-lite-preview",
+        model=GEMINI_MODEL,
         contents=[
             MEAL_RECALCULATION_PROMPT,
             json.dumps(meal, ensure_ascii=True),

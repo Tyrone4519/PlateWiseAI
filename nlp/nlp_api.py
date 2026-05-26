@@ -30,7 +30,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 
 # Version lock for the wrapper layer.
 # The actual vision / nutrition / advice pipeline is still called from platewise_streamlit_app.
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite-preview").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite").strip()
 
 platewise.get_gemini_api_key = lambda: GEMINI_API_KEY
 

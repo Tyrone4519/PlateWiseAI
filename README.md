@@ -1,64 +1,44 @@
 # PlateWise AI
 
-PlateWise AI is a full-stack AI nutrition assistant designed to help users record meals, analyze meal images, manage personal dietary profiles, and generate nutrition reports.
+PlateWise AI is a full-stack food health and nutrition assistant. Users can create a dietary profile, upload or capture meal photos, analyse meals with AI, edit detected ingredients, generate structured nutrition reports, and review historical meal records.
 
-The project combines a mobile-style web frontend, a FastAPI NLP backend, Supabase authentication/database/storage, Gemini vision-language models, USDA nutrition data, and custom NLP logic.
+> This system provides general nutrition support only. It is not a medical diagnosis tool and should not replace professional medical advice.
 
-Users can upload or take a photo of a meal, ask nutrition-related questions, edit detected ingredients, generate a structured nutrition report, and review historical meal records.
+## Table of Contents
 
----
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Configuration](#configuration)
+- [Local Development](#local-development)
+- [Cloud Deployment](#cloud-deployment)
+- [Backend API](#backend-api)
+- [Supabase Setup](#supabase-setup)
+- [Data Files](#data-files)
+- [Troubleshooting](#troubleshooting)
+- [Client Handover](#client-handover)
 
-## Project Overview
+## Overview
 
-PlateWise AI supports:
-
-- User sign-up and login
-- Email confirmation flow
-- New user onboarding
-- Personal profile management
-- Meal image upload and camera capture
-- AI meal image analysis
-- Editable detected ingredients
-- Custom ingredient search and saving
-- Chat-based nutrition advice
-- Automatic report generation
-- Report item storage with calories, protein, fat, carbs, sodium, sugar, and fiber
-- Meal image storage
-- History search and report detail view
-- Dashboard nutrition summary
-- Hydration tracking
-- Activity and exercise tracking
-- Profile avatar upload
-- Dietary restrictions and health condition management
-
-> PlateWise AI is not intended to provide medical diagnosis. It provides general nutrition support and dietary guidance.
-
----
-
-## System Architecture
-
-The project uses a separated frontend and backend architecture.
+PlateWise AI uses a separated frontend and backend architecture.
 
 ```text
 User Browser
-    ↓
-Frontend Web App
-    ↓
-Supabase Auth / Database / Storage
-    ↓
-FastAPI NLP Backend
-    ↓
-Gemini API + USDA API + Local NLP Modules
+  -> Frontend Web App
+  -> Supabase Auth / Database / Storage
+  -> FastAPI NLP Backend
+  -> Gemini API + local NLP modules
 ```
 
-### Local Development
+Local service URLs:
 
 ```text
-Frontend: http://127.0.0.1:5500/frontend/index.html
+Frontend: http://127.0.0.1:5500/index.html
 NLP API:  http://127.0.0.1:9000
 ```
 
-### Cloud Deployment
+Cloud deployment targets:
 
 ```text
 Frontend: GitHub Pages
@@ -68,581 +48,74 @@ Storage:  Supabase Storage
 Auth:     Supabase Auth
 ```
 
----
+## Features
 
-## Main Tech Stack
+- Supabase-based sign-up, login, email confirmation, and onboarding
+- Personal profile management for goals, activity level, restrictions, health conditions, and avatar
+- Meal image upload or camera capture with AI-based food recognition
+- Editable ingredients with food search, custom items, and portion adjustment
+- Profile-aware nutrition advice through chat and meal analysis
+- Structured report generation with calories, macros, sodium, sugar, fiber, risk level, and recommendations
+- Saved report history, search, filtering, meal detail view, and dashboard summaries
+
+## Tech Stack
+
+| Area | Technologies |
+| --- | --- |
+| Frontend | HTML, CSS, JavaScript ES modules, Supabase JavaScript client |
+| Backend | Python 3.12, FastAPI, Uvicorn, Pydantic, Pillow, Pandas |
+| Database and Storage | Supabase Auth, Supabase PostgreSQL, Supabase Storage, Row Level Security policies |
+| Data | USDA-style CSV data, local food database, JSON reference libraries |
+| AI and Nutrition APIs | Gemini API, local NLP modules |
+
+## Project Structure
+
+```text
+.
+|-- frontend/
+|   |-- index.html
+|   |-- confirm.html
+|   |-- onboarding.html
+|   |-- dashboard.html
+|   |-- chat.html
+|   |-- history.html
+|   |-- meal-detail.html
+|   |-- profile.html
+|   |-- style.css
+|   |-- assets/
+|   `-- js/
+|-- nlp/
+|   |-- nlp_api.py
+|   |-- platewise_streamlit_app.py
+|   |-- requirements.txt
+|   |-- .env.example
+|   |-- food_database.csv
+|   |-- usda_LLMprompt.csv
+|   |-- nutrition5k_food_entity_library.json
+|   |-- disease_library.json
+|   `-- who_knowledge.json
+|-- supabase/
+|   `-- rls_policies.sql
+|-- docs/
+|   `-- PROJECT_HANDOVER_DETAILS.md
+|-- .github/workflows/
+|-- setup.ps1
+|-- start-backend.ps1
+|-- start-frontend.ps1
+|-- PlateAI.pdf
+|-- .gitignore
+`-- README.md
+```
+
+## Configuration
 
 ### Frontend
-
-- HTML
-- CSS
-- JavaScript ES Modules
-- Supabase JavaScript Client
-- Mobile-app style UI
-- GitHub Pages deployment
-
-### Backend
-
-- Python 3.12
-- FastAPI
-- Uvicorn
-- Pydantic
-- Pillow
-- Pandas
-- Streamlit-compatible NLP logic
-- Google GenAI SDK
-- USDA data integration
-
-### Database and Storage
-
-- Supabase Auth
-- Supabase PostgreSQL
-- Supabase Storage
-- Row Level Security policies
-
-### AI and Nutrition APIs
-
-- Gemini API for image and language understanding
-- USDA API and USDA local prompt data for nutrition reference
-- Local NLP modules for intent recognition, profile updates, food extraction, condition handling, and meal correction
-
----
-
-## Folder Structure
-
-```text
-PlateWiseAI/
-├─ frontend/
-│  ├─ index.html
-│  ├─ confirm.html
-│  ├─ onboarding.html
-│  ├─ dashboard.html
-│  ├─ chat.html
-│  ├─ history.html
-│  ├─ meal-detail.html
-│  ├─ profile.html
-│  ├─ style.css
-│  ├─ assets/
-│  │  ├─ MET_activities_with_activity_level.csv
-│  │  └─ colorful_egg/
-│  └─ js/
-│     ├─ config.js
-│     ├─ lib/
-│     │  ├─ auth.js
-│     │  ├─ data.js
-│     │  ├─ router.js
-│     │  ├─ supabaseClient.js
-│     │  └─ utils.js
-│     └─ pages/
-│        ├─ indexPage.js
-│        ├─ onboardingPage.js
-│        ├─ dashboardPage.js
-│        ├─ chatPage.js
-│        ├─ historyPage.js
-│        ├─ mealDetailPage.js
-│        └─ profilePage.js
-│
-├─ nlp/
-│  ├─ nlp_api.py
-│  ├─ platewise_streamlit_app.py
-│  ├─ food_extractor.py
-│  ├─ user_correction.py
-│  ├─ condition_extractor.py
-│  ├─ condition_intent.py
-│  ├─ goal_update_intent.py
-│  ├─ preference_intent.py
-│  ├─ weight_update_intent.py
-│  ├─ intent_recognition_defs.py
-│  ├─ embedding_utils.py
-│  ├─ disease_library.json
-│  ├─ who_knowledge.json
-│  ├─ nutrition5k_food_entity_library.json
-│  ├─ food_database.csv
-│  ├─ usda_LLMprompt.csv
-│  └─ requirements.txt
-│
-├─ supabase/
-│  └─ rls_policies.sql
-│
-├─ .github/
-│  └─ workflows/
-│
-├─ .gitignore
-└─ README.md
-```
-
----
-
-## Frontend Features
-
-### 1. Authentication
-
-The login page supports:
-
-- Email login
-- Email sign-up
-- Supabase Auth session handling
-- Invalid session cleanup
-- Automatic routing after login
-
-After login:
-
-- If the profile is incomplete, the user is redirected to onboarding.
-- If the profile is complete, the user is redirected to dashboard.
-
-The email confirmation flow uses `confirm.html`, allowing users to confirm their email and then manually return to the login page.
-
-### 2. Onboarding
-
-New users must complete onboarding before using the full app.
-
-The onboarding page collects:
-
-- Name
-- Age
-- Gender
-- Height
-- Weight
-- Goal
-- Activity level
-- Allergies / dietary restrictions
-- Health conditions
-- Optional avatar preview
-
-Supported goals:
-
-```text
-lose_weight
-gain_weight
-gain_muscle
-maintain
-```
-
-The onboarding data is saved to the `user_profiles` table in Supabase.
-
-### 3. Dashboard
-
-The dashboard gives a nutrition overview based on saved reports and daily summaries.
-
-It includes:
-
-- Today's meal count
-- Estimated calorie intake
-- Sodium intake
-- Sugar intake
-- Macro progress
-- Seven-day nutrition trend
-- Daily summary cards
-- Hydration tracking
-- Optional hydration goal adjustment
-- Activity / exercise logging
-- Activity calorie estimation using MET values
-- Custom activity template support
-- Quick navigation to Chat and Profile
-
-Dashboard data mainly comes from:
-
-- `reports`
-- `daily_summaries`
-- `user_profiles`
-- Optional `water_logs`
-- Optional `exercise_logs`
-- Optional `user_custom_activities`
-
-If optional activity or water tables are not configured, the core nutrition report features can still work.
-
-### 4. Chat Page
-
-The Chat page is the main AI interaction page.
-
-It supports:
-
-- Meal image upload
-- Camera capture
-- Image preview
-- Image compression before upload
-- Image analysis through local or deployed NLP backend
-- Normal chat with the AI assistant
-- Meal advice based on the user's profile
-- Detected ingredient editing
-- Food search
-- Custom ingredient creation
-- Custom ingredient history
-- Ingredient weight adjustment
-- Meal recalculation
-- Report generation
-- Meal image upload to Supabase Storage
-- Report saving to Supabase
-- Automatic daily summary update
-- Automatic profile update if the NLP output includes profile changes
-
-Local backend URL:
-
-```text
-http://127.0.0.1:9000
-```
-
-The Chat page calls these NLP endpoints:
-
-```text
-GET  /food-search
-POST /analyze-image
-POST /edit-meal
-POST /meal-advice
-POST /chat-turn
-POST /build-report
-```
-
-### 5. Ingredient Editing
-
-After a meal image is analyzed, the detected ingredients can be reviewed and edited before generating a final report.
-
-The user can:
-
-- Rename ingredients
-- Search food items
-- Add custom ingredients
-- Remove ingredients
-- Change estimated grams
-- Save edits
-- Confirm ingredients before report generation
-
-The edited meal is then used for the final report generation.
-
-### 6. Report Generation
-
-When the user clicks the Report button, the app:
-
-1. Sends the current meal and profile to the NLP backend.
-2. Receives structured report data.
-3. Uploads the meal image to Supabase Storage.
-4. Inserts the main report into `reports`.
-5. Inserts each detected food item into `report_items`.
-6. Inserts full JSON output into `report_summaries`.
-7. Updates `daily_summaries`.
-8. Applies `profile_updates` to `user_profiles` if returned by NLP.
-
-Saved report fields include:
-
-- `title`
-- `report_date`
-- `source_type`
-- `image_url`
-- `risk_level`
-- `final_summary`
-- `recommendation`
-- `total_calories`
-- `total_protein_g`
-- `total_fat_g`
-- `total_carbs_g`
-- `total_sodium_mg`
-- `total_sugar_g`
-- `total_fiber_g`
-
-Saved report item fields include:
-
-- `food_name`
-- `estimated_portion`
-- `portion_unit`
-- `calories`
-- `protein_g`
-- `fat_g`
-- `carbs_g`
-- `sodium_mg`
-- `sugar_g`
-- `fiber_g`
-- `confidence_score`
-- `notes`
-
-### 7. History Page
-
-The History page displays saved reports.
-
-It supports:
-
-- Report list view
-- Keyword search
-- Date filtering
-- Calendar-style filters
-- Image thumbnails
-- Risk level display
-- Nutrition summary per report
-- Search by title, summary, recommendation, ingredients, and report details
-- Navigation to a detailed report page
-
-### 8. Meal Detail Page
-
-The meal detail page shows a full report selected from History.
-
-It displays:
-
-- Meal title
-- Report date
-- Risk level
-- Meal image
-- Nutrition summary
-- Report items
-- Calories / protein / carbs / fat / sodium / sugar / fiber
-- Final analysis text
-- Recommendation
-- Full structured summary where available
-
-### 9. Profile Page
-
-The Profile page supports:
-
-- Viewing user profile
-- Editing goal
-- Editing biometrics
-- Editing restrictions
-- Editing health notes
-- Avatar upload
-- Activity level display
-- Logout
-- Navigation back to Chat
-
-Profile data is stored in `user_profiles`.
-
-Important profile fields include:
-
-- `name`
-- `age`
-- `gender`
-- `height_cm`
-- `weight_kg`
-- `goal`
-- `restrictions`
-- `health_notes`
-- `avatar_url`
-- `activity_level`
-
----
-
-## Backend / NLP Features
-
-The backend is built with FastAPI and is located in:
-
-```text
-nlp/nlp_api.py
-```
-
-The backend wraps and reuses the original PlateWise NLP logic from:
-
-- `platewise_streamlit_app.py`
-- `food_extractor.py`
-- `user_correction.py`
-- `condition_extractor.py`
-- `condition_intent.py`
-- `goal_update_intent.py`
-- `preference_intent.py`
-- `weight_update_intent.py`
-- `intent_recognition_defs.py`
-- `embedding_utils.py`
-
-The backend is not only a direct Gemini wrapper. It combines:
-
-- Gemini image / language model output
-- USDA nutrition references
-- Local food database search
-- User profile context
-- Intent recognition
-- Allergy / restriction handling
-- Condition extraction
-- Weight / goal update detection
-- WHO-style nutrition knowledge
-- Meal correction logic
-- Report structuring logic
-
----
-
-## Backend API Endpoints
-
-### Root
-
-```text
-GET /
-```
-
-Returns backend running status.
-
-### Food Search
-
-```text
-GET /food-search?q=rice&limit=8
-```
-
-Searches local food data and returns matched foods for ingredient editing.
-
-### Analyze Image
-
-```text
-POST /analyze-image
-```
-
-Accepts:
-
-- Image file
-- User profile
-- Goal
-
-Returns:
-
-- AI reply
-- Detected meal
-- Ingredients
-- Nutrition estimates
-- Profile context
-- Possible profile updates
-
-### Edit Meal
-
-```text
-POST /edit-meal
-```
-
-Accepts:
-
-- Current meal
-- Profile
-- Edited ingredients
-
-Returns:
-
-- Updated meal
-- Recalculated nutrition
-- Updated advice
-
-### Meal Advice
-
-```text
-POST /meal-advice
-```
-
-Accepts:
-
-- Current meal
-- Profile
-
-Returns nutrition advice based on the user's current profile and meal.
-
-### Chat Turn
-
-```text
-POST /chat-turn
-```
-
-Handles normal user chat.
-
-It can process:
-
-- Meal questions
-- Profile questions
-- Restriction updates
-- Allergy statements
-- Condition-related messages
-- Goal updates
-- Meal correction requests
-
-### Build Report
-
-```text
-POST /build-report
-```
-
-Generates the final structured report.
-
-Returns:
-
-- Title
-- Insight
-- Final summary
-- Recommendation
-- Risk level
-- Report totals
-- Items for database
-- Possible profile updates
-
----
-
-## Supabase Database
-
-The main Supabase tables are:
-
-- `users`
-- `user_profiles`
-- `reports`
-- `report_items`
-- `report_summaries`
-- `daily_summaries`
-
-The project can also use extended optional tables for dashboard and custom features:
-
-- `water_logs`
-- `exercise_logs`
-- `user_custom_ingredients`
-- `user_custom_activities`
-
-Core report functionality depends mainly on:
-
-- `users`
-- `user_profiles`
-- `reports`
-- `report_items`
-- `report_summaries`
-- `daily_summaries`
-
----
-
-## Supabase Storage Buckets
-
-The app uses Supabase Storage for uploaded files.
-
-Recommended buckets:
-
-- `meal-images`
-- `profile-avatars`
-
-`meal-images` stores uploaded meal photos.
-
-`profile-avatars` stores user avatar images.
-
----
-
-## Environment Variables
-
-Create this file locally:
-
-```text
-nlp/.env
-```
-
-Example:
-
-```env
-GEMINI_API_KEY=your_gemini_api_key
-USDA_API_KEY=your_usda_api_key
-GEMINI_MODEL=gemini-3.1-flash-lite-preview
-```
-
-Do not commit `.env` to GitHub.
-
-For Render deployment, add these variables in Render Environment settings:
-
-- `GEMINI_API_KEY`
-- `USDA_API_KEY`
-- `GEMINI_MODEL`
-
----
-
-## Supabase Frontend Configuration
 
 Frontend Supabase configuration is stored in:
 
 ```text
 frontend/js/config.js
 ```
-
-Example:
 
 ```js
 export const APP_CONFIG = {
@@ -653,191 +126,164 @@ export const APP_CONFIG = {
 };
 ```
 
-The Supabase publishable / anon key is visible in frontend code because the browser needs it. This is normal only if Row Level Security is properly configured.
+The Supabase publishable key can be used in browser code only when Row Level Security is correctly configured.
 
-Never expose the following in frontend code or GitHub:
+### Backend
 
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `GEMINI_API_KEY`
-- `USDA_API_KEY`
-
----
-
-## Local Installation
-
-This project is tested with Python 3.12.
-
-### 1. Clone the repository
-
-```powershell
-git clone https://github.com/your-username/PlateWiseAI.git
-cd PlateWiseAI
-```
-
-### 2. Create a Python virtual environment
-
-```powershell
-cd nlp
-py -3.12 -m venv .venv
-```
-
-### 3. Activate the virtual environment
-
-PowerShell:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-If PowerShell blocks script execution:
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
-```
-
-Then activate again:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-### 4. Install backend dependencies
-
-```powershell
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install -r requirements.txt
-```
-
-### 5. Create `.env`
-
-Inside the `nlp` folder:
+The backend reads environment variables from:
 
 ```text
 nlp/.env
 ```
 
-Add:
+This file is not committed to Git because it contains secrets. A safe template is committed at:
+
+```text
+nlp/.env.example
+```
+
+Required variables:
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key
-USDA_API_KEY=your_usda_api_key
-GEMINI_MODEL=gemini-3.1-flash-lite-preview
+GEMINI_MODEL=gemini-2.5-flash-lite
 ```
 
-### 6. Run the NLP backend locally
+| Variable | Purpose |
+| --- | --- |
+| `GEMINI_API_KEY` | Gemini API access |
+| `GEMINI_MODEL` | Gemini model name used by the backend |
 
-From the `nlp` folder:
+### Backend URL Used by Frontend
 
-```powershell
-python -m uvicorn nlp_api:app --reload --port 9000
+The frontend backend URL logic is in:
+
+```text
+frontend/js/pages/chatPage.js
 ```
 
-Backend should be available at:
+Local development uses:
 
 ```text
 http://127.0.0.1:9000
 ```
 
-API docs:
+Production fallback:
 
-```text
-http://127.0.0.1:9000/docs
+```js
+window.PLATEWISE_NLP_BASE ||
+localStorage.getItem("PLATEWISE_NLP_BASE") ||
+"https://YOUR_RENDER_NLP_URL.onrender.com"
 ```
 
----
+Before production handover, replace the placeholder backend URL or set `PLATEWISE_NLP_BASE`.
 
-## Run the Frontend Locally
 
-Open another terminal from the project root:
+## Local Development
+
+Use this path when cloning the repository for active frontend/backend development.
+
+### Requirements
+
+```text
+Python 3.12
+Supabase project
+Gemini API key
+```
+
+### 1. Clone the Repository
 
 ```powershell
-cd PlateWiseAI
+git clone https://github.sydney.edu.au/yhan9755/Capstone_project_CS66-1.git
+cd Capstone_project_CS66-1
+```
+
+### 2. Create Backend Environment
+
+```powershell
+cd nlp
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
+```
+
+### 3. Create `.env`
+
+```powershell
+copy .env.example .env
+notepad .env
+```
+
+Paste your own Gemini API key:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash-lite
+```
+
+### 4. Start the Backend
+
+Keep this PowerShell window in the `nlp` folder:
+
+```powershell
+py -3.12 -m uvicorn nlp_api:app --host 127.0.0.1 --port 9000
+```
+
+Health check:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:9000/
+```
+
+Food search check:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:9000/food-search?q=rice&limit=5"
+```
+
+### 5. Start the Frontend
+
+Open another PowerShell window from the repository root:
+
+```powershell
+cd frontend
 py -3.12 -m http.server 5500
 ```
 
-Then visit:
+Frontend URL:
 
 ```text
-http://127.0.0.1:5500/frontend/index.html
+http://127.0.0.1:5500/index.html
 ```
 
-For local testing, the frontend automatically uses:
+## Cloud Deployment
+
+### Frontend: GitHub Pages
+
+Workflow:
 
 ```text
-http://127.0.0.1:9000
+.github/workflows/deploy-frontend.yml
 ```
 
-as the NLP backend.
+The workflow deploys the `frontend/` folder when changes are pushed to `main`.
 
----
-
-## Local Test Flow
-
-Recommended local test order:
-
-1. Start NLP backend on port 9000.
-2. Start frontend server on port 5500.
-3. Open frontend login page.
-4. Login or create account.
-5. Complete onboarding.
-6. Go to Chat.
-7. Upload a meal image.
-8. Click Analyze.
-9. Edit detected ingredients if needed.
-10. Generate Report.
-11. Check History.
-12. Open Meal Detail.
-13. Check Dashboard.
-14. Check Profile updates.
-
----
-
-## GitHub Pages Deployment
-
-The frontend is deployed as a static site.
-
-Recommended GitHub repository structure:
+Check deployment status:
 
 ```text
-PlateWiseAI/
-├─ frontend/
-├─ nlp/
-├─ supabase/
-└─ .github/workflows/
+GitHub -> Actions
 ```
 
-The GitHub Pages workflow should deploy the `frontend/` folder.
-
-After pushing changes:
-
-```powershell
-git add frontend nlp supabase .gitignore README.md
-git commit -m "Update PlateWise AI"
-git pull --rebase origin main
-git push origin main
-```
-
-Then check:
+Expected frontend URL format:
 
 ```text
-GitHub → Actions
+https://your-username.github.io/your-repository/
 ```
 
-Wait until the deployment is green.
+### Backend: Render
 
-Frontend URL example:
-
-```text
-https://your-username.github.io/PlateWiseAI/
-```
-
----
-
-## Render Backend Deployment
-
-The NLP backend is deployed as a Render Web Service.
-
-Render settings:
+Suggested Render settings:
 
 ```text
 Root Directory: nlp
@@ -845,96 +291,143 @@ Build Command: pip install -r requirements.txt
 Start Command: uvicorn nlp_api:app --host 0.0.0.0 --port $PORT
 ```
 
-Environment variables:
-
-- `GEMINI_API_KEY`
-- `USDA_API_KEY`
-- `GEMINI_MODEL`
-
-After pushing backend changes to GitHub:
+Required Render environment variables:
 
 ```text
-Render → platewise-nlp → Manual Deploy → Deploy latest commit
+GEMINI_API_KEY
+GEMINI_MODEL
 ```
 
-Or enable Auto Deploy.
-
-Test the deployed backend:
+Health check:
 
 ```text
 https://your-render-service.onrender.com/
 ```
 
----
+### Production Frontend Backend URL
 
-## Frontend Backend URL Setting
+After backend deployment, update the production backend URL in `frontend/js/pages/chatPage.js` or provide `window.PLATEWISE_NLP_BASE`.
 
-In:
+## Backend API
 
-```text
-frontend/js/pages/chatPage.js
-```
-
-The app uses local NLP during development:
+Backend entry file:
 
 ```text
-http://127.0.0.1:9000
+nlp/nlp_api.py
 ```
 
-For production, update the Render backend URL:
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/` | Health/status check |
+| `GET` | `/food-search?q=rice&limit=8` | Search local nutrition data for ingredient editing |
+| `POST` | `/analyze-image` | Analyse a meal image and return detected meal data |
+| `POST` | `/edit-meal` | Recalculate nutrition after ingredient edits |
+| `POST` | `/meal-advice` | Generate advice for the current meal and user profile |
+| `POST` | `/chat-turn` | Handle normal chat and profile/condition/goal update intents |
+| `POST` | `/build-report` | Generate the final structured report for storage |
 
-```js
-const NLP_BASE = IS_LOCAL
-  ? "http://127.0.0.1:9000"
-  : "https://your-render-service.onrender.com";
+The backend reuses the original NLP logic in `platewise_streamlit_app.py` and related modules. It combines Gemini output, local food search, user profile context, allergy handling, condition extraction, and report structuring.
+
+## Supabase Setup
+
+### Core Tables
+
+```text
+users
+user_profiles
+reports
+report_items
+report_summaries
+daily_summaries
 ```
 
-Make sure this URL matches the actual Render service URL.
+### Optional Tables
 
----
+```text
+water_logs
+exercise_logs
+user_custom_ingredients
+user_custom_activities
+```
 
-## Security Notes
+### Storage Buckets
 
-The following files and folders should not be committed:
+```text
+meal-images
+profile-avatars
+```
 
-- `.env`
-- `.venv/`
-- `__pycache__/`
-- `*.pyc`
+### RLS Policies
 
-Supabase publishable / anon key can appear in frontend code, but database access must be protected by RLS policies.
+RLS policies are stored in:
 
-Never expose:
+```text
+supabase/rls_policies.sql
+```
 
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `GEMINI_API_KEY`
-- `USDA_API_KEY`
+Run this script in the Supabase SQL Editor after the main schema has been created.
 
-If any private key is accidentally pushed to GitHub, rotate that key immediately.
+## Data Files
 
----
+| File | Purpose |
+| --- | --- |
+| `nlp/food_database.csv` | Local searchable food database |
+| `nlp/usda_LLMprompt.csv` | USDA-style nutrition reference data |
+| `nlp/nutrition5k_food_entity_library.json` | Food entity library |
+| `nlp/disease_library.json` | Health condition reference data |
+| `nlp/who_knowledge.json` | Nutrition guidance reference |
+| `frontend/assets/MET_activities_with_activity_level.csv` | MET activity data for exercise calorie estimation |
 
-## Known Limitations
+## Troubleshooting
 
-- Gemini image analysis may sometimes return temporary high-demand errors.
-- Render free instances may sleep when inactive and can be slower on the first request.
-- Large images may increase backend memory usage, so the frontend compresses images before upload.
-- Nutrition estimation is approximate and should not be treated as medical diagnosis.
-- More accurate food quantity estimation would require further model and dataset improvements.
+### PowerShell Blocks Scripts
 
----
+If PowerShell blocks `.ps1` scripts, run this once:
 
-## Future Improvements
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
 
-Potential next steps:
+For a temporary setting that only affects the current PowerShell window:
 
-- Improve ingredient-level nutrition accuracy
-- Add a full report export feature
-- Add doctor / caregiver dashboard
-- Add better weekly and monthly analytics
-- Add food barcode scanning
-- Add multi-language support
-- Add stronger medical disclaimers
-- Improve RLS policies for production use
-- Add automated testing
-- Convert the frontend into a PWA mobile app
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+### Python 3.12 Is Not Installed
+
+This project uses Python 3.12 by default. If Python 3.12 is not available, check the installed Python versions:
+
+```powershell
+py -0p
+```
+
+If Python 3.11 is installed, run setup with:
+
+```powershell
+.\setup.ps1 -PythonVersion 3.11
+```
+
+For the most consistent setup, install Python 3.12 from:
+
+```text
+https://www.python.org/downloads/windows/
+```
+
+During installation, enable:
+
+```text
+Add python.exe to PATH
+```
+
+### Port Already in Use
+
+If port `9000` or `5500` is already in use, stop the existing process or change the port in the command.
+
+## Client Handover
+
+Detailed handover notes are available at:
+
+```text
+docs/PROJECT_HANDOVER_DETAILS.md
+```

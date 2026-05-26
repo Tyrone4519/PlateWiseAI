@@ -291,6 +291,10 @@ function normalizeProfileItem(value) {
   return singularizeProfileFood(normalized);
 }
 
+function normalizeHealthNote(value) {
+  return normalizeProfileToken(value);
+}
+
 function formatPreferenceLabel(value) {
   return String(value || "")
     .replaceAll("_", " ")
@@ -346,13 +350,19 @@ function healthInlineInputMarkup(elementId) {
   `;
 }
 
+function normalizeChipValue(elementId, value) {
+  return elementId === "profileHealthNotes"
+    ? normalizeHealthNote(value)
+    : normalizeProfileItem(value);
+}
+
 function renderChipList(elementId, values) {
   const container = $(elementId);
   if (!container) return;
 
   const items = [];
   for (const value of splitList(values)) {
-    const normalized = normalizeProfileItem(value);
+    const normalized = normalizeChipValue(elementId, value);
     if (normalized && !items.includes(normalized)) items.push(normalized);
   }
 
@@ -399,6 +409,14 @@ function mergeProfilesForDisplay(dbProfile, cachedProfile) {
     merged.restrictions = "";
   }
 
+  if (Object.prototype.hasOwnProperty.call(dbProfile || {}, "health_notes")) {
+    merged.health_notes = dbProfile?.health_notes || "";
+    delete merged.healthNotes;
+    delete merged.conditions;
+  } else {
+    merged.health_notes = cachedProfile?.health_notes || cachedProfile?.healthNotes || cachedProfile?.conditions || "";
+  }
+
   return merged;
 }
 
@@ -431,13 +449,22 @@ function setAvatar(profile) {
 function fillProfile(profile) {
   const cachedProfile = readCachedProfile();
   const normalizedActivityLevel = getMostReliableActivityLevel(profile, cachedProfile);
+  const hasPrimaryHealthNotes = Object.prototype.hasOwnProperty.call(profile || {}, "health_notes");
 
   currentProfile = {
     ...(profile || {}),
+    health_notes: hasPrimaryHealthNotes
+      ? (profile?.health_notes || "")
+      : (profile?.healthNotes || profile?.conditions || ""),
     activity: normalizedActivityLevel,
     activityLevel: normalizedActivityLevel,
     activity_level: normalizedActivityLevel,
   };
+
+  if (hasPrimaryHealthNotes) {
+    delete currentProfile.healthNotes;
+    delete currentProfile.conditions;
+  }
 
   const updatedCache = {
     ...cachedProfile,
@@ -446,6 +473,11 @@ function fillProfile(profile) {
     activityLevel: normalizedActivityLevel,
     activity_level: normalizedActivityLevel,
   };
+
+  if (hasPrimaryHealthNotes) {
+    delete updatedCache.healthNotes;
+    delete updatedCache.conditions;
+  }
 
   localStorage.setItem(ACTIVITY_STORAGE_KEY, normalizedActivityLevel);
   writeProfileCache(updatedCache);
@@ -500,12 +532,7 @@ function fillProfile(profile) {
   }
 
   renderChipList("profileRestrictions", getAllergiesAndPreferences(currentProfile));
-  renderChipList(
-    "profileHealthNotes",
-    currentProfile?.health_notes ||
-      currentProfile?.healthNotes ||
-      currentProfile?.conditions
-  );
+  renderChipList("profileHealthNotes", currentProfile?.health_notes);
 
   setAvatar(currentProfile);
   document.querySelector(".profile-goal-card-v2")?.classList.toggle("is-editing", goalEditing);
@@ -678,8 +705,9 @@ function getCurrentRestrictions() {
 }
 
 function getCurrentHealthNotes() {
-  return splitList(currentProfile?.health_notes || currentProfile?.healthNotes || currentProfile?.conditions)
+  return splitList(currentProfile?.health_notes)
     .map((item) => item.trim())
+    .map(normalizeHealthNote)
     .filter(Boolean);
 }
 
@@ -726,6 +754,18 @@ async function updateProfileRecord(payload) {
     .eq("user_id", currentAppUser.id);
 
   if (fallbackResult.error) throw fallbackResult.error;
+
+  const fallbackProfile = { ...(currentProfile || {}), ...fallbackPayload };
+  for (const key of Object.keys(payload)) {
+    if (!(key in fallbackPayload)) delete fallbackProfile[key];
+  }
+  currentProfile = fallbackProfile;
+
+  const cachedProfile = { ...readCachedProfile(), ...fallbackProfile };
+  for (const key of Object.keys(payload)) {
+    if (!(key in fallbackPayload)) delete cachedProfile[key];
+  }
+  writeProfileCache(cachedProfile);
 }
 
 function readNumberInput(id, min, max) {
@@ -775,15 +815,15 @@ async function saveHealthLists(restrictions, healthNotes, dietPreferences = getC
 }
 
 async function removeHealthChip(targetId, chipValue) {
-  const normalizedChip = normalizeProfileItem(chipValue);
+  const normalizedChip = normalizeChipValue(targetId, chipValue);
   const restrictions = getCurrentRestrictions().filter((item) => normalizeProfileItem(item) !== normalizedChip);
-  const healthNotes = getCurrentHealthNotes().filter((item) => normalizeProfileItem(item) !== normalizedChip);
+  const healthNotes = getCurrentHealthNotes().filter((item) => normalizeHealthNote(item) !== normalizedChip);
 
   if (targetId === "profileRestrictions") {
     const dietPreferences = getCurrentDietPreferences().filter((item) => normalizeProfileItem(item) !== normalizedChip);
     await saveHealthLists(restrictions, getCurrentHealthNotes(), dietPreferences);
   } else {
-    await saveHealthLists(getCurrentRestrictions(), healthNotes);
+    await saveHealthLists(restrictions, healthNotes);
   }
 
   fillProfile(currentProfile);
